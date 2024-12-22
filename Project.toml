@@ -1,0 +1,13 @@
+name = "SimpleAtomsStructures"
+uuid = "5a5d92d7-a3f7-4436-85e1-8ad3c2f35372"
+authors = ["Teemu Järvinen <teemu.j.jarvinen@gmail.com> and contributors"]
+version = "0.1.0-DEV"
+
+[compat]
+julia = "1.6.7"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
