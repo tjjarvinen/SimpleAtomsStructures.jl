@@ -1,5 +1,5 @@
 
-abstract type AbstractSimpleSystem{D, UL, TF} where{UL<:Unitful.Length, TF<:Number} <: AtomsBase.AbstractSystem{D} end
+abstract type AbstractSimpleSystem{D, UL, TF}  <: AtomsBase.AbstractSystem{D} end
 
 mutable struct SimpleSystem{D, UL, TF, TP} <: AbstractSimpleSystem{D, UL, TF}
     species::Vector{ChemicalSpecies}
