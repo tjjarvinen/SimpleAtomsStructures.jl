@@ -1,0 +1,4 @@
+[deps]
+AtomsBase = "a963bdd2-2df7-4f54-a1ee-49d51e6be12a"
+AtomsBaseTesting = "ed7c10db-df7e-4efa-a7be-4f4190f7f227"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
