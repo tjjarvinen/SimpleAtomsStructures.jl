@@ -24,8 +24,10 @@ function SimpleSystem(species::ChemicalSpecies, pos::AbstractVector{<:Unitful.Le
     return SimpleSystem([species], [pos])
 end
 
+SimpleSystem(sys::SimpleSystem) = sys
 
-Base.getindex(ss::SimpleSystem, i::Int) = Atom(ss.species[i], ss.position[i])
+
+Base.getindex(ss::SimpleSystem, i::Int) = SimpleAtom(ss.species[i], ss.position[i])
 function Base.getindex(ss::AbstractSimpleSystem, x::Symbol)
     if x === :cell_vectors
         return cell_vectors(ss)
@@ -99,7 +101,7 @@ function SimpleVelocitySystem(
     return SimpleVelocitySystem([species], [pos], [vel])
 end
 
-Base.getindex(ss::SimpleVelocitySystem, i::Int) = Atom(ss.species[i], ss.position[i], ss.velocity[i])
+Base.getindex(ss::SimpleVelocitySystem, i::Int) = SimpleAtom(ss.species[i], ss.position[i]; velocity=ss.velocity[i])
 
 AtomsBase.atomkeys(::SimpleVelocitySystem) = (:position, :velocity, :species, :mass)
 AtomsBase.cell(::SimpleVelocitySystem{D, UL, UV, TP, TV}) where{D, UL,UV, TP, TV} = IsolatedCell(D, TP)

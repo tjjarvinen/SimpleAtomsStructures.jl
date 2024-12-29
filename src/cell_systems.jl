@@ -16,6 +16,8 @@ function CellSystem(sys::AbstractSystem)
     return CellSystem(base_sys, cell(sys))
 end
 
+CellSystem(sys::CellSystem) = sys
+
 Base.getindex(cs::CellSystem, i::Int) = cs.base_system[i]
 Base.getindex(cs::CellSystem, c::Colon) = cs.base_system[c]
 Base.getindex(cs::CellSystem, x::Symbol) = cs.base_system[x]

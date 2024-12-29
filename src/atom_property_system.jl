@@ -14,6 +14,8 @@ mutable struct AtomicPropertySystem{D, UL, TB, TP} <: AbstractIsolatedSystem{D, 
 end
 
 function AtomicPropertySystem(sys::AbstractSystem, properties::NamedTuple)
+    # ignore atom_properties on sys and use properties as atom_properties
+    # also ignore global system properties
     @argcheck all(x->length(x)==length(sys), properties)
     prop_names = Tuple( x  for x in keys(properties) if !(x in (:species, :position, :velocity)) )
     el_types = Tuple( eltype(properties[key]) for key in prop_names )
@@ -26,6 +28,7 @@ function AtomicPropertySystem(sys::AbstractSystem, properties::NamedTuple)
 end
 
 function AtomicPropertySystem(sys::AbstractSystem)
+     # ignore cell and global system properties
     prop_names = collect( atomkeys(sys) ) # Need Vector for filter to work
     no_special_mass = all( 1:length(sys) ) do i
         mass(sys, i) ≈ mass(species(sys, i))
@@ -50,9 +53,11 @@ function AtomicPropertySystem(sys::AbstractSystem)
     return AtomicPropertySystem(base_sys, prop)
 end
 
+AtomicPropertySystem(sys::AbstractIsolatedSystem) = sys
 
 function Base.getindex(sys::AtomicPropertySystem, i::Int)
-    Atom(sys.base_system[i]; sys.atom_properties[i]...)
+    tmp = sys.base_system[i]
+    SimpleAtom( (; tmp.data..., sys.atom_properties[i]...) )
 end
 
 Base.getindex(sys::AtomicPropertySystem, x::Symbol) = sys.base_system[x]

@@ -8,11 +8,16 @@ using Unitful
 
 export AtomicPropertySystem
 export CellSystem
+export GeneralSystem
+export GenericSystem
+export SimpleAtom
 export SimpleSystem
 export SimpleVelocitySystem
 
+include("simple_atom.jl")
 include("structures.jl")
 include("atom_property_system.jl")
 include("cell_systems.jl")
+include("general_system.jl")
 
 end
