@@ -1,16 +1,16 @@
 
-abstract type AbstractSimpleSystem{D, UL, TF}  <: AtomsBase.AbstractSystem{D} end
+abstract type AbstractIsolatedSystem{D, UL}  <: AtomsBase.AbstractSystem{D} end
+abstract type AbstractSimpleSystem{D, UL}  <: AbstractIsolatedSystem{D, UL} end
 
-mutable struct SimpleSystem{D, UL, TF, TP} <: AbstractSimpleSystem{D, UL, TF}
+mutable struct SimpleSystem{D, UL, TP} <: AbstractSimpleSystem{D, UL}
     species::Vector{ChemicalSpecies}
-    positions::Vector{SVector{D, TP}}
+    position::Vector{SVector{D, TP}}
     function SimpleSystem(species::AbstractVector{ChemicalSpecies}, r::AbstractVector{<:AbstractVector})
         @argcheck length(species) == length(r)
-        D = (length∘eltype)(r)
+        D  = (length∘eltype)(r)
         TP = (eltype∘eltype)(r)
-        TF = (typeof∘ustrip)(zero(TP))
         UL = unit(TP)
-        new{D, UL, TF, TP}(species, r)
+        new{D, UL, TP}(species, r)
     end
 end
 
@@ -25,8 +25,8 @@ function SimpleSystem(species::ChemicalSpecies, pos::AbstractVector{<:Unitful.Le
 end
 
 
-Base.getindex(ss::SimpleSystem, i::Int) = Atom(ss.species[i], ss.positions[i])
-function Base.getindex(ss::SimpleSystem, x::Symbol)
+Base.getindex(ss::SimpleSystem, i::Int) = Atom(ss.species[i], ss.position[i])
+function Base.getindex(ss::AbstractSimpleSystem, x::Symbol)
     if x === :cell_vectors
         return cell_vectors(ss)
     elseif x === :periodicity
@@ -37,41 +37,73 @@ function Base.getindex(ss::SimpleSystem, x::Symbol)
 end
 
 
-Base.keys(::SimpleSystem) = (:cell_vectors, :periodicity)
-Base.length(ss::SimpleSystem) = length(ss.species)
+Base.haskey(ss::AbstractSimpleSystem, x::Symbol) = in(x, keys(ss) )
+Base.keys(::AbstractSimpleSystem) = (:cell_vectors, :periodicity)
+Base.length(ss::AbstractSimpleSystem) = length(ss.species)
 
 AtomsBase.atomkeys(::SimpleSystem) = (:position, :species, :mass)
-AtomsBase.cell(::SimpleSystem{D, UL, TF, TP}) where{D, UL, TF, TP} = IsolatedCell(D, TP)
-AtomsBase.mass(ss::SimpleSystem, i) = mass.(ss.species[i])
-AtomsBase.position(ss::SimpleSystem, i) = ss.positions[i]
-AtomsBase.species(ss::SimpleSystem, i) = ss.species[i]
-AtomsBase.element_symbol(ss::SimpleSystem, i) = element_symbol.(species(ss, i))
+AtomsBase.hasatomkey(ss::AbstractSimpleSystem, x::Symbol) = x in atomkeys(ss)
+AtomsBase.cell(::SimpleSystem{D, UL, TP}) where{D, UL, TP} = IsolatedCell(D, TP)
+AtomsBase.mass(ss::AbstractSimpleSystem, i) = mass.(ss.species[i])
+AtomsBase.position(ss::AbstractSimpleSystem, i) = ss.position[i]
+AtomsBase.species(ss::AbstractSimpleSystem, i) = ss.species[i]
+AtomsBase.element_symbol(ss::AbstractSimpleSystem, i) = element_symbol.(species(ss, i))
 
 
 function get_subsystem(ss::SimpleSystem, i)
-    return SimpleSystem(ss.species[i], ss.positions[i])
+    return SimpleSystem(ss.species[i], ss.position[i])
 end
 
-function get_subsystem(ss::SimpleSystem, spc::ChemicalSpecies)
+function get_subsystem(ss::AbstractSimpleSystem, spc::ChemicalSpecies)
     i = ss.species .== spc
-    return SimpleSystem(ss.species[i], ss.positions[i])
+    return get_subsystem(ss, i)
 end
 
 ##
 
-# mutable struct SimpleVelocitySystem{D, UL, UT, TF, TP, TV} <: AbstractSimpleSystem{D}
-#     base_system::SimpleSystem{D, UL, TF, TP}
-#     velocities::Vector{SVector{D, TV}}
-#     function SimpleVelocitySystem(
-#         sys::SimpleSystem{D, UL, TF, TP},
-#         v::AbstractVector{<:AbstractVector}
-#     ) where {D, UL, TF, TP}
-#         @argcheck length(sys) == length(v)
-#         @argcheck D == (length∘eltype)(v)
-#         _TV = (eltype∘eltype)(v)
-#         UV = unit(_TV)
-#         UT = UL / UV |> upreferred
-#         TV = typeof( zero(TF) * UL/UT )
-#         new{D, UL, UT, TF, TP, TV}()(sys, v)
-#     end
-# end
+mutable struct SimpleVelocitySystem{D, UL, UV, TP, TV} <: AbstractSimpleSystem{D, UL}
+    species::Vector{ChemicalSpecies}
+    position::Vector{SVector{D, TP}}
+    velocity::Vector{SVector{D, TV}}
+    function SimpleVelocitySystem(
+        species::AbstractVector{ChemicalSpecies}, 
+        r::AbstractVector{<:AbstractVector}, 
+        v::AbstractVector{<:AbstractVector}
+    )
+        @argcheck length(species) == length(r) == length(v)
+        @argcheck length( eltype(r) ) == length( eltype(v) )
+        D  = (length∘eltype)(r)
+        TP = (eltype∘eltype)(r)
+        UL = unit(TP)
+
+        TV = (eltype∘eltype)(v)
+        UV = unit(TV)
+        new{D, UL, UV, TP, TV}(species, r, v)
+    end
+end
+
+
+function SimpleVelocitySystem(sys::AbstractSystem)
+    @argcheck hasatomkey(sys, :velocity)
+    scp = species(sys, :)
+    pos = position(sys, :)
+    vel = velocity(sys, :)
+    return SimpleVelocitySystem(scp, pos, vel)
+end
+
+function SimpleVelocitySystem(
+    species::ChemicalSpecies, 
+    pos::AbstractVector{<:Unitful.Length}, 
+    vel::AbstractVector{<:Unitful.Velocity}
+)
+    return SimpleVelocitySystem([species], [pos], [vel])
+end
+
+Base.getindex(ss::SimpleVelocitySystem, i::Int) = Atom(ss.species[i], ss.position[i], ss.velocity[i])
+
+AtomsBase.atomkeys(::SimpleVelocitySystem) = (:position, :velocity, :species, :mass)
+AtomsBase.cell(::SimpleVelocitySystem{D, UL, UV, TP, TV}) where{D, UL,UV, TP, TV} = IsolatedCell(D, TP)
+
+function get_subsystem(ss::SimpleVelocitySystem, i)
+    return SimpleVelocitySystem(ss.species[i], ss.position[i], ss.velocity[i])
+end
