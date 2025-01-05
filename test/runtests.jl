@@ -28,6 +28,7 @@ using Test
         @test all( position(sys, :) .≈ position( ref.system, :) )
         @test all( velocity(sys, :) .≈ velocity( ref.system, :) )
         @test all( species(sys, :) .== species( ref.system, :) )
+        @test all( mass(sys, :) .== mass( ref.system, :) )
         @test isa(cell(sys), IsolatedCell)
         @test all( sys[:periodicity] .== (false, false, false) )
         @test_throws KeyError sys[:dummy]
@@ -61,6 +62,7 @@ using Test
         @test all( position(sys, :) .≈ position( ref.system, :) )
         @test all( velocity(sys, :) .≈ velocity( ref.system, :) )
         @test all( species(sys, :) .== species( ref.system, :) )
+        @test all( mass(sys, :) .== mass( ref.system, :) )
         @test isa(cell(sys), PeriodicCell)
         @test all( cell_vectors(sys) .≈ ref.cell_vectors )
         @test all( x-> hasatomkey(sys, x), keys(ref.atprop) )

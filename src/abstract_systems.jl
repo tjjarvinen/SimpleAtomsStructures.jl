@@ -8,6 +8,7 @@ abstract type AbstractSimpleSystem{D, LU}    <: AbstractIsolatedSystem{D, LU} en
 
 AtomsBase.atomkeys(sys::AbstractCompositeSystem) = AtomsBase.atomkeys(sys.base_system)
 AtomsBase.cell(sys::AbstractCompositeSystem) = AtomsBase.cell(sys.base_system)
+AtomsBase.mass(sys::AbstractCompositeSystem, i) = AtomsBase.mass(sys.base_system, i)
 AtomsBase.position(sys::AbstractCompositeSystem, i) =  position(sys.base_system, i)
 AtomsBase.species(sys::AbstractCompositeSystem, i) = AtomsBase.species(sys.base_system, i)
 AtomsBase.velocity(sys::AbstractCompositeSystem, i) =  AtomsBase.velocity(sys.base_system, i)

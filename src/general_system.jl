@@ -32,7 +32,6 @@ end
 Base.haskey(sys::GeneralSystem, x::Symbol) = in(x, keys(sys))
 
 
-
 ## Generic builders
 
 function GenericSystem(sys::AbstractSystem; kwargs...)

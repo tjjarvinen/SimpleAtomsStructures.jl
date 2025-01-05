@@ -1,15 +1,15 @@
 
 
 
-mutable struct AtomicPropertySystem{D, UL, TB, TP} <: AbstractIsolatedSystem{D, UL}
+mutable struct AtomicPropertySystem{D, LU, TB, TP} <: AbstractIsolatedSystem{D, LU}
     base_system::TB
     atom_properties::Vector{TP}
     function AtomicPropertySystem(
-        sys::AbstractSimpleSystem{D, UL}, 
+        sys::AbstractSimpleSystem{D, LU}, 
         properties::AbstractVector{<:NamedTuple}
-    ) where {D, UL}
+    ) where {D, LU}
         @argcheck length(sys) == length(properties)
-        new{D, UL, typeof(sys), eltype(properties)}(sys, properties)
+        new{D, LU, typeof(sys), eltype(properties)}(sys, properties)
     end
 end
 
@@ -66,9 +66,23 @@ Base.length(sys::AtomicPropertySystem) = length(sys.base_system)
 
 function AtomsBase.atomkeys(sys::AtomicPropertySystem)
     base_keys = AtomsBase.atomkeys(sys.base_system)
-    property_keys = keys(sys.atom_properties[1])
+    property_keys = _property_keys(sys)
+    # remove double mass
     if :mass in property_keys
         base_keys = Tuple( x for x in base_keys if x !=:mass  )
     end
     return (base_keys..., property_keys...)
+end
+
+_property_keys(sys::AtomicPropertySystem) = keys(sys.atom_properties[1])
+_has_property_key(sys::AtomicPropertySystem, x::Symbol) = in(x, _property_keys(sys)) 
+
+
+AtomsBase.mass(sys::AtomicPropertySystem, i::Int) = _has_property_key(sys, :mass) ? sys.atom_properties[i][:mass] : mass(sys.base_system, i)
+AtomsBase.mass(sys::AtomicPropertySystem, i) = _has_property_key(sys, :mass) ? getindex.(sys.atom_properties[i], :mass) : mass(sys.base_system, i)
+
+function Base.append!(sys1::AtomicPropertySystem{D, LU, TB, TP}, sys2::AtomicPropertySystem{D, LU, TB, TP}) where{D, LU, TB, TP}
+    Base.append!(sys1.base_system, sys2.base_system)
+    Base.append!(sys1.atom_properties, sys2.atom_properties)
+    return sys1
 end
