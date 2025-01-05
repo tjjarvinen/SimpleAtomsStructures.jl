@@ -1,16 +1,14 @@
 
-abstract type AbstractIsolatedSystem{D, UL}  <: AtomsBase.AbstractSystem{D} end
-abstract type AbstractSimpleSystem{D, UL}  <: AbstractIsolatedSystem{D, UL} end
 
-mutable struct SimpleSystem{D, UL, TP} <: AbstractSimpleSystem{D, UL}
+mutable struct SimpleSystem{D, LU, TP} <: AbstractSimpleSystem{D, LU}
     species::Vector{ChemicalSpecies}
     position::Vector{SVector{D, TP}}
     function SimpleSystem(species::AbstractVector{ChemicalSpecies}, r::AbstractVector{<:AbstractVector})
         @argcheck length(species) == length(r)
         D  = (length∘eltype)(r)
         TP = (eltype∘eltype)(r)
-        UL = unit(TP)
-        new{D, UL, TP}(species, r)
+        LU = unit(TP)
+        new{D, LU, TP}(species, r)
     end
 end
 
@@ -45,7 +43,7 @@ Base.length(ss::AbstractSimpleSystem) = length(ss.species)
 
 AtomsBase.atomkeys(::SimpleSystem) = (:position, :species, :mass)
 AtomsBase.hasatomkey(ss::AbstractSimpleSystem, x::Symbol) = x in atomkeys(ss)
-AtomsBase.cell(::SimpleSystem{D, UL, TP}) where{D, UL, TP} = IsolatedCell(D, TP)
+AtomsBase.cell(::SimpleSystem{D, LU, TP}) where{D, LU, TP} = IsolatedCell(D, TP)
 AtomsBase.mass(ss::AbstractSimpleSystem, i) = mass.(ss.species[i])
 AtomsBase.position(ss::AbstractSimpleSystem, i) = ss.position[i]
 AtomsBase.species(ss::AbstractSimpleSystem, i) = ss.species[i]
@@ -56,14 +54,43 @@ function get_subsystem(ss::SimpleSystem, i)
     return SimpleSystem(ss.species[i], ss.position[i])
 end
 
-function get_subsystem(ss::AbstractSimpleSystem, spc::ChemicalSpecies)
+function get_subsystem(ss::SimpleSystem, spc::ChemicalSpecies)
     i = ss.species .== spc
     return get_subsystem(ss, i)
 end
 
+
+function Base.append!(sys1::SimpleSystem{D, LU, TP}, sys2::SimpleSystem{D, LU, TP}) where{D, LU, TP}
+    Base.append!(sys1.position, sys2.position)
+    Base.append!(sys1.species, sys2.species)
+    return sys1
+end
+
+function Base.:+(sys1::SimpleSystem{D, LU, TP}, sys2::SimpleSystem{D, LU, TP}) where{D, LU, TP}
+    tmp = deepcopy(sys1)
+    append!(tmp, sys2)
+    return tmp
+end
+
+function Base.deleteat!(sys::SimpleSystem, i)
+    Base.deleteat!(sys.species, i)
+    Base.deleteat!(sys.position, i)
+    return sys
+end
+
+function AtomsBase.set_species!(sys::AbstractSimpleSystem, i, x)
+    setindex!(sys.species, x, i)
+    return sys
+end
+
+function AtomsBase.set_position!(sys::AbstractSimpleSystem, i, x)
+    setindex!(sys.position, x, i)
+    return sys
+end
+
 ##
 
-mutable struct SimpleVelocitySystem{D, UL, UV, TP, TV} <: AbstractSimpleSystem{D, UL}
+mutable struct SimpleVelocitySystem{D, LU, UV, TP, TV} <: AbstractSimpleSystem{D, LU}
     species::Vector{ChemicalSpecies}
     position::Vector{SVector{D, TP}}
     velocity::Vector{SVector{D, TV}}
@@ -76,11 +103,11 @@ mutable struct SimpleVelocitySystem{D, UL, UV, TP, TV} <: AbstractSimpleSystem{D
         @argcheck length( eltype(r) ) == length( eltype(v) )
         D  = (length∘eltype)(r)
         TP = (eltype∘eltype)(r)
-        UL = unit(TP)
+        LU = unit(TP)
 
         TV = (eltype∘eltype)(v)
         UV = unit(TV)
-        new{D, UL, UV, TP, TV}(species, r, v)
+        new{D, LU, UV, TP, TV}(species, r, v)
     end
 end
 
@@ -104,8 +131,40 @@ end
 Base.getindex(ss::SimpleVelocitySystem, i::Int) = SimpleAtom(ss.species[i], ss.position[i]; velocity=ss.velocity[i])
 
 AtomsBase.atomkeys(::SimpleVelocitySystem) = (:position, :velocity, :species, :mass)
-AtomsBase.cell(::SimpleVelocitySystem{D, UL, UV, TP, TV}) where{D, UL,UV, TP, TV} = IsolatedCell(D, TP)
+AtomsBase.cell(::SimpleVelocitySystem{D, LU, UV, TP, TV}) where{D, LU,UV, TP, TV} = IsolatedCell(D, TP)
+AtomsBase.velocity(sys::SimpleVelocitySystem, i) = sys.velocity[i]
 
 function get_subsystem(ss::SimpleVelocitySystem, i)
     return SimpleVelocitySystem(ss.species[i], ss.position[i], ss.velocity[i])
+end
+
+function get_subsystem(ss::SimpleVelocitySystem, spc::ChemicalSpecies)
+    i = ss.species .== spc
+    return get_subsystem(ss, i)
+end
+
+function Base.append!(
+    sys1::SimpleVelocitySystem{D, LU, UV, TP, TV}, 
+    sys2::SimpleVelocitySystem{D, LU, UV, TP, TV}
+) where{D, LU, UV, TP, TV}
+    Base.append!(sys1.position, sys2.position)
+    Base.append!(sys1.species, sys2.species)
+    Base.append!(sys1.velocity, sys2.velocity)
+    return sys1
+end
+
+function Base.:+(
+    sys1::SimpleVelocitySystem{D, LU, UV, TP, TV}, 
+    sys2::SimpleVelocitySystem{D, LU, UV, TP, TV}
+) where{D, LU, UV, TP, TV}
+    tmp = deepcopy(sys1)
+    append!(tmp, sys2)
+    return tmp
+end
+
+function Base.deleteat!(sys::SimpleVelocitySystem, i)
+    Base.deleteat!(sys.species, i)
+    Base.deleteat!(sys.position, i)
+    Base.deleteat!(sys.velocity, i)
+    return sys
 end

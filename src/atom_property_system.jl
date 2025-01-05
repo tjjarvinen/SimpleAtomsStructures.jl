@@ -65,12 +65,10 @@ Base.keys(::AtomicPropertySystem) = (:cell_vectors, :periodicity)
 Base.length(sys::AtomicPropertySystem) = length(sys.base_system)
 
 function AtomsBase.atomkeys(sys::AtomicPropertySystem)
-    base_keys = atomkeys(sys.base_system)
+    base_keys = AtomsBase.atomkeys(sys.base_system)
     property_keys = keys(sys.atom_properties[1])
     if :mass in property_keys
         base_keys = Tuple( x for x in base_keys if x !=:mass  )
     end
     return (base_keys..., property_keys...)
 end
-
-AtomsBase.cell(sys::AtomicPropertySystem) = cell(sys.base_system)

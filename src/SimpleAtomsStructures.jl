@@ -14,6 +14,7 @@ export SimpleAtom
 export SimpleSystem
 export SimpleVelocitySystem
 
+include("abstract_systems.jl")
 include("simple_atom.jl")
 include("structures.jl")
 include("atom_property_system.jl")

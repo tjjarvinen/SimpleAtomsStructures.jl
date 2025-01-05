@@ -1,5 +1,5 @@
 
-mutable struct GeneralSystem{D, LU, TB} <: AbstractSystem{D}
+mutable struct GeneralSystem{D, LU, TB} <: AbstractCompositeSystem{D, LU}
     base_system::TB
     properties::Dict{Symbol, Any}
     function GeneralSystem(
@@ -29,9 +29,9 @@ function Base.keys(sys::GeneralSystem)
     return (:cell_vectors, :periodicity, tmp...)
 end
 
-Base.length(sys::GeneralSystem) = length(sys.base_system)
+Base.haskey(sys::GeneralSystem, x::Symbol) = in(x, keys(sys))
 
-AtomsBase.cell(sys::GeneralSystem) = cell(sys.base_system)
+
 
 ## Generic builders
 
