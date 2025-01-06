@@ -78,8 +78,26 @@ function GenericSystem(sys::AbstractSystem; kwargs...)
     end
 end
 
-function GenericSystem(species::AbstractVector{ChemicalSpecies}, r::AbstractVector{<:AbstractVector}; kwargs...)
-    tmp = SimpleSystem(species, r)
+function GenericSystem(sys::AtomsVector; kwargs...)
+    tmp = AtomicPropertySystem(sys)
+    if length(kwargs) > 0
+        return GenericSystem(tmp; kwargs...)
+    end
+    return tmp
+end
+
+function GenericSystem(sys::AbstractVector{<:Union{AtomsBase.Atom, AtomsBase.AtomView}}; kwargs...)
+    tmp = SimpleAtom.(sys)
+    return GenericSystem(tmp; kwargs...)
+end
+
+function GenericSystem(
+    species::species::AbstractVector{<:AtomsBase.AtomId},
+    r::AbstractVector{<:AbstractVector};
+    kwargs...
+)   
+    spc = ChemicalSpecies.(species)
+    tmp = SimpleSystem(spc, r)
     if length(kwargs) > 0
         return GenericSystem(tmp; kwargs...)
     end
@@ -87,12 +105,13 @@ function GenericSystem(species::AbstractVector{ChemicalSpecies}, r::AbstractVect
 end
 
 function GenericSystem(
-    species::AbstractVector{ChemicalSpecies}, 
+    species::AbstractVector{<:AtomsBase.AtomId}, 
     r::AbstractVector{<:AbstractVector},
     v::AbstractVector{<:AbstractVector}; 
     kwargs...
-)
-    tmp = SimpleVelocitySystem(species, r, v)
+)   
+    spc = ChemicalSpecies.(species)
+    tmp = SimpleVelocitySystem(spc, r, v)
     if length(kwargs) > 0
         return GenericSystem(tmp; kwargs...)
     end

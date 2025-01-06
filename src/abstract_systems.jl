@@ -14,3 +14,9 @@ AtomsBase.species(sys::AbstractCompositeSystem, i) = AtomsBase.species(sys.base_
 AtomsBase.velocity(sys::AbstractCompositeSystem, i) =  AtomsBase.velocity(sys.base_system, i)
 
 Base.length(sys::AbstractCompositeSystem) = length(sys.base_system)
+
+function Base.:+(sys1::T, sys2::T) where{T<:AbstractIsolatedSystem}
+    tmp = deepcopy(sys1)
+    append!(tmp, sys2)
+    return tmp
+end

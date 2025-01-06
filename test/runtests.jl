@@ -44,6 +44,7 @@ using Test
         @test all( position(sys, :) .≈ position( ref.system, :) )
         @test all( velocity(sys, :) .≈ velocity( ref.system, :) )
         @test all( species(sys, :) .== species( ref.system, :) )
+        @test all( mass(sys, :) .== mass( ref.system, :) )
         @test isa(cell(sys), PeriodicCell)
         @test all( cell_vectors(sys) .≈ ref.cell_vectors )
         @test all( sys[:periodicity] .== ref.periodicity )
@@ -75,5 +76,10 @@ using Test
         @test all( x-> haskey(ref.sysprop, x), keys(sys) )
         @test all( [all(sys[k] .== v) for (k,v) in pairs(ref.sysprop)] )
         @test_throws KeyError sys[:dummy]
+    end
+    @testset "SimpleAtom" begin
+        sys = GenericSystem(ref.system)
+        va = sys[:]
+        
     end
 end

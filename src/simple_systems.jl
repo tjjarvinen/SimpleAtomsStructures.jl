@@ -12,17 +12,22 @@ mutable struct SimpleSystem{D, LU, TP} <: AbstractSimpleSystem{D, LU}
     end
 end
 
-function SimpleSystem(sys::AbstractSystem)
-    scp = species(sys, :)
-    pos = position(sys, :)
-    return SimpleSystem(scp, pos)
-end
-
 function SimpleSystem(species::ChemicalSpecies, pos::AbstractVector{<:Unitful.Length})
     return SimpleSystem([species], [pos])
 end
 
 SimpleSystem(sys::SimpleSystem) = sys
+
+function SimpleSystem(ss::Union{AbstractSystem,AtomsVector}, i)
+    return SimpleSystem(species(ss, i), position(ss, i))
+end
+
+SimpleSystem(sys::Union{AbstractSystem, AtomsVector}) = SimpleSystem(sys, :)
+
+function SimpleSystem(ss::Union{AbstractSystem,AtomsVector}, spc::ChemicalSpecies)
+    i = species(ss, :) .== spc
+    return SimpleSystem(ss, i)
+end
 
 
 Base.getindex(ss::SimpleSystem, i::Int) = SimpleAtom(ss.species[i], ss.position[i])
@@ -49,28 +54,17 @@ AtomsBase.position(ss::AbstractSimpleSystem, i) = ss.position[i]
 AtomsBase.species(ss::AbstractSimpleSystem, i) = ss.species[i]
 AtomsBase.element_symbol(ss::AbstractSimpleSystem, i) = element_symbol.(species(ss, i))
 
-
-function get_subsystem(ss::SimpleSystem, i)
-    return SimpleSystem(ss.species[i], ss.position[i])
-end
-
-function get_subsystem(ss::SimpleSystem, spc::ChemicalSpecies)
-    i = ss.species .== spc
-    return get_subsystem(ss, i)
-end
-
-
 function Base.append!(sys1::SimpleSystem{D, LU, TP}, sys2::SimpleSystem{D, LU, TP}) where{D, LU, TP}
     Base.append!(sys1.position, sys2.position)
     Base.append!(sys1.species, sys2.species)
     return sys1
 end
 
-function Base.:+(sys1::SimpleSystem{D, LU, TP}, sys2::SimpleSystem{D, LU, TP}) where{D, LU, TP}
-    tmp = deepcopy(sys1)
-    append!(tmp, sys2)
-    return tmp
-end
+# function Base.:+(sys1::SimpleSystem{D, LU, TP}, sys2::SimpleSystem{D, LU, TP}) where{D, LU, TP}
+#     tmp = deepcopy(sys1)
+#     append!(tmp, sys2)
+#     return tmp
+# end
 
 function Base.deleteat!(sys::SimpleSystem, i)
     Base.deleteat!(sys.species, i)
@@ -112,13 +106,18 @@ mutable struct SimpleVelocitySystem{D, LU, UV, TP, TV} <: AbstractSimpleSystem{D
 end
 
 
-function SimpleVelocitySystem(sys::AbstractSystem)
-    @argcheck hasatomkey(sys, :velocity)
-    scp = species(sys, :)
-    pos = position(sys, :)
-    vel = velocity(sys, :)
-    return SimpleVelocitySystem(scp, pos, vel)
+function SimpleVelocitySystem(sys::Union{AbstractSystem, AtomsVector}, i)
+    if hasatomkey(sys, :velocity)
+        scp = species(sys, i)
+        pos = position(sys, i)
+        vel = velocity(sys, i)
+        return SimpleVelocitySystem(scp, pos, vel)
+    else
+        return SimpleSystem(sys, i)
+    end
 end
+
+SimpleVelocitySystem(sys::Union{AbstractSystem, AtomsVector}) = SimpleVelocitySystem(sys, :)
 
 function SimpleVelocitySystem(
     species::ChemicalSpecies, 
@@ -128,20 +127,16 @@ function SimpleVelocitySystem(
     return SimpleVelocitySystem([species], [pos], [vel])
 end
 
+function SimpleVelocitySystem(ss::Union{AbstractSystem,AtomsVector}, spc::ChemicalSpecies)
+    i = species(ss, :) .== spc
+    return SimpleVelocitySystem(ss, i)
+end
+
 Base.getindex(ss::SimpleVelocitySystem, i::Int) = SimpleAtom(ss.species[i], ss.position[i]; velocity=ss.velocity[i])
 
 AtomsBase.atomkeys(::SimpleVelocitySystem) = (:position, :velocity, :species, :mass)
 AtomsBase.cell(::SimpleVelocitySystem{D, LU, UV, TP, TV}) where{D, LU,UV, TP, TV} = IsolatedCell(D, TP)
 AtomsBase.velocity(sys::SimpleVelocitySystem, i) = sys.velocity[i]
-
-function get_subsystem(ss::SimpleVelocitySystem, i)
-    return SimpleVelocitySystem(ss.species[i], ss.position[i], ss.velocity[i])
-end
-
-function get_subsystem(ss::SimpleVelocitySystem, spc::ChemicalSpecies)
-    i = ss.species .== spc
-    return get_subsystem(ss, i)
-end
 
 function Base.append!(
     sys1::SimpleVelocitySystem{D, LU, UV, TP, TV}, 
@@ -153,14 +148,6 @@ function Base.append!(
     return sys1
 end
 
-function Base.:+(
-    sys1::SimpleVelocitySystem{D, LU, UV, TP, TV}, 
-    sys2::SimpleVelocitySystem{D, LU, UV, TP, TV}
-) where{D, LU, UV, TP, TV}
-    tmp = deepcopy(sys1)
-    append!(tmp, sys2)
-    return tmp
-end
 
 function Base.deleteat!(sys::SimpleVelocitySystem, i)
     Base.deleteat!(sys.species, i)

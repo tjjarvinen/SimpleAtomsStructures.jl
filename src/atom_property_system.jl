@@ -1,7 +1,7 @@
 
 
 
-mutable struct AtomicPropertySystem{D, LU, TB, TP} <: AbstractIsolatedSystem{D, LU}
+mutable struct AtomicPropertySystem{D, LU, TB, TP, SM} <: AbstractIsolatedSystem{D, LU}
     base_system::TB
     atom_properties::Vector{TP}
     function AtomicPropertySystem(
@@ -9,7 +9,7 @@ mutable struct AtomicPropertySystem{D, LU, TB, TP} <: AbstractIsolatedSystem{D, 
         properties::AbstractVector{<:NamedTuple}
     ) where {D, LU}
         @argcheck length(sys) == length(properties)
-        new{D, LU, typeof(sys), eltype(properties)}(sys, properties)
+        new{D, LU, typeof(sys), eltype(properties), haskey(properties[1], :mass)}(sys, properties)
     end
 end
 
@@ -27,33 +27,48 @@ function AtomicPropertySystem(sys::AbstractSystem, properties::NamedTuple)
     return AtomicPropertySystem(sys, prop)
 end
 
-function AtomicPropertySystem(sys::AbstractSystem)
-     # ignore cell and global system properties
-    prop_names = collect( atomkeys(sys) ) # Need Vector for filter to work
-    no_special_mass = all( 1:length(sys) ) do i
-        mass(sys, i) ≈ mass(species(sys, i))
-    end
-    if no_special_mass
-        filter!(x-> x != :mass, prop_names)
-    end
-    filter!(x-> ! in(x, (:species, :position, :velocity)), prop_names)
-    prop_names = Tuple(prop_names)
-    base_sys = hasatomkey(sys, :velocity) ? SimpleVelocitySystem(sys) : SimpleSystem(sys)
-    if length(prop_names) == 0
-        return base_sys
-    end
-    a = sys[1]
-    el_types = Tuple( typeof(a[key]) for key in prop_names )
-    TP = NamedTuple{ prop_names, Tuple{el_types...} }
-    prop = Vector{TP}(undef, length(sys))
-    for i in 1:length(sys)
-        a = sys[i]
-        prop[i] = NamedTuple( key =>  a[key] for key in prop_names )
-    end
-    return AtomicPropertySystem(base_sys, prop)
+
+AtomicPropertySystem(sys::AtomicPropertySystem) = sys
+function AtomicPropertySystem(sys::AtomicPropertySystem, i)
+    tmp = SimpleVelocitySystem(sys.base_system, i)
+    return AtomicPropertySystem( tmp, sys.atom_properties[i] )
 end
 
-AtomicPropertySystem(sys::AbstractIsolatedSystem) = sys
+function AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}, i; use_species_mass=true)
+    prop_names = [ k for k in atomkeys(sys) if ! in(k, (:species, :position, :velocity)) ]
+    # Check if could remove mass term and use only ChemicalSpecies mass
+    if use_species_mass
+        no_special_mass = all( i ) do j
+            mass(sys, j) ≈ mass(species(sys, j))
+        end
+        if no_special_mass
+            filter!(x-> x != :mass, prop_names)
+        end
+    end
+    if length(prop_names) == 0
+        return SimpleVelocitySystem(sys, i)
+    end
+    tmp = map( sys[i] ) do at
+        NamedTuple( k=>at[k] for k in prop_names )
+    end
+    return AtomicPropertySystem( SimpleVelocitySystem(sys, i), tmp )
+end
+
+AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}, ::Colon) = AtomicPropertySystem(sys, 1:length(sys))
+AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}) = AtomicPropertySystem(sys, :)
+AtomicPropertySystem(sys::AbstractSimpleSystem, i) = SimpleVelocitySystem(sys, i)
+AtomicPropertySystem(sys::AbstractSimpleSystem)    = SimpleVelocitySystem(sys)
+
+function AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}, i::BitVector)
+    j = (1:length(sys))[i]
+    return AtomicPropertySystem(sys, j)
+end
+
+function AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}, spc::ChemicalSpecies)
+    i = species(sys, :) .== spc
+    return AtomicPropertySystem(sys, i)
+end
+
 
 function Base.getindex(sys::AtomicPropertySystem, i::Int)
     tmp = sys.base_system[i]
@@ -78,10 +93,18 @@ _property_keys(sys::AtomicPropertySystem) = keys(sys.atom_properties[1])
 _has_property_key(sys::AtomicPropertySystem, x::Symbol) = in(x, _property_keys(sys)) 
 
 
-AtomsBase.mass(sys::AtomicPropertySystem, i::Int) = _has_property_key(sys, :mass) ? sys.atom_properties[i][:mass] : mass(sys.base_system, i)
-AtomsBase.mass(sys::AtomicPropertySystem, i) = _has_property_key(sys, :mass) ? getindex.(sys.atom_properties[i], :mass) : mass(sys.base_system, i)
+function AtomsBase.mass(sys::AtomicPropertySystem{D, LU, TB, TP, true}, i::Int) where {D, LU, TB, TP}
+    return getindex(sys.atom_properties[i], :mass)
+end
+function AtomsBase.mass(sys::AtomicPropertySystem{D, LU, TB, TP, true}, i) where {D, LU, TB, TP}
+    return getindex.(sys.atom_properties[i], :mass)
+end
 
-function Base.append!(sys1::AtomicPropertySystem{D, LU, TB, TP}, sys2::AtomicPropertySystem{D, LU, TB, TP}) where{D, LU, TB, TP}
+function AtomsBase.mass(sys::AtomicPropertySystem{D, LU, TB, TP, false}, i) where {D, LU, TB, TP}
+    return mass(sys.base_system, i)
+end
+
+function Base.append!(sys1::T, sys2::T) where{T<:AtomicPropertySystem}
     Base.append!(sys1.base_system, sys2.base_system)
     Base.append!(sys1.atom_properties, sys2.atom_properties)
     return sys1
