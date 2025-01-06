@@ -92,7 +92,7 @@ function GenericSystem(sys::AbstractVector{<:Union{AtomsBase.Atom, AtomsBase.Ato
 end
 
 function GenericSystem(
-    species::species::AbstractVector{<:AtomsBase.AtomId},
+    species::AbstractVector{<:AtomsBase.AtomId},
     r::AbstractVector{<:AbstractVector};
     kwargs...
 )   
