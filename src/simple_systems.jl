@@ -46,13 +46,10 @@ Base.haskey(ss::AbstractSimpleSystem, x::Symbol) = in(x, keys(ss) )
 Base.keys(::AbstractSimpleSystem) = (:cell_vectors, :periodicity)
 Base.length(ss::AbstractSimpleSystem) = length(ss.species)
 
-AtomsBase.atomkeys(::SimpleSystem) = (:position, :species, :mass)
+AtomsBase.atomkeys(::SimpleSystem) = (:position, :species)
 AtomsBase.hasatomkey(ss::AbstractSimpleSystem, x::Symbol) = x in atomkeys(ss)
 AtomsBase.cell(::SimpleSystem{D, LU, TP}) where{D, LU, TP} = IsolatedCell(D, TP)
-AtomsBase.mass(ss::AbstractSimpleSystem, i) = mass.(ss.species[i])
-AtomsBase.position(ss::AbstractSimpleSystem, i) = ss.position[i]
-AtomsBase.species(ss::AbstractSimpleSystem, i) = ss.species[i]
-AtomsBase.element_symbol(ss::AbstractSimpleSystem, i) = element_symbol.(species(ss, i))
+
 
 function Base.append!(sys1::SimpleSystem{D, LU, TP}, sys2::SimpleSystem{D, LU, TP}) where{D, LU, TP}
     Base.append!(sys1.position, sys2.position)
@@ -60,27 +57,12 @@ function Base.append!(sys1::SimpleSystem{D, LU, TP}, sys2::SimpleSystem{D, LU, T
     return sys1
 end
 
-# function Base.:+(sys1::SimpleSystem{D, LU, TP}, sys2::SimpleSystem{D, LU, TP}) where{D, LU, TP}
-#     tmp = deepcopy(sys1)
-#     append!(tmp, sys2)
-#     return tmp
-# end
-
 function Base.deleteat!(sys::SimpleSystem, i)
     Base.deleteat!(sys.species, i)
     Base.deleteat!(sys.position, i)
     return sys
 end
 
-function AtomsBase.set_species!(sys::AbstractSimpleSystem, i, x)
-    setindex!(sys.species, x, i)
-    return sys
-end
-
-function AtomsBase.set_position!(sys::AbstractSimpleSystem, i, x)
-    setindex!(sys.position, x, i)
-    return sys
-end
 
 ##
 
@@ -134,7 +116,7 @@ end
 
 Base.getindex(ss::SimpleVelocitySystem, i::Int) = SimpleAtom(ss.species[i], ss.position[i]; velocity=ss.velocity[i])
 
-AtomsBase.atomkeys(::SimpleVelocitySystem) = (:position, :velocity, :species, :mass)
+AtomsBase.atomkeys(::SimpleVelocitySystem) = (:position, :velocity, :species)
 AtomsBase.cell(::SimpleVelocitySystem{D, LU, UV, TP, TV}) where{D, LU,UV, TP, TV} = IsolatedCell(D, TP)
 AtomsBase.velocity(sys::SimpleVelocitySystem, i) = sys.velocity[i]
 

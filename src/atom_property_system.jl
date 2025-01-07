@@ -34,17 +34,8 @@ function AtomicPropertySystem(sys::AtomicPropertySystem, i)
     return AtomicPropertySystem( tmp, sys.atom_properties[i] )
 end
 
-function AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}, i; use_species_mass=true)
+function AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}, i)
     prop_names = [ k for k in atomkeys(sys) if ! in(k, (:species, :position, :velocity)) ]
-    # Check if could remove mass term and use only ChemicalSpecies mass
-    if use_species_mass
-        no_special_mass = all( i ) do j
-            mass(sys, j) ≈ mass(species(sys, j))
-        end
-        if no_special_mass
-            filter!(x-> x != :mass, prop_names)
-        end
-    end
     if length(prop_names) == 0
         return SimpleVelocitySystem(sys, i)
     end
@@ -55,11 +46,12 @@ function AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}, i; use_sp
 end
 
 AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}, ::Colon) = AtomicPropertySystem(sys, 1:length(sys))
-AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}) = AtomicPropertySystem(sys, :)
+AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector})          = AtomicPropertySystem(sys, :)
 AtomicPropertySystem(sys::AbstractSimpleSystem, i) = SimpleVelocitySystem(sys, i)
 AtomicPropertySystem(sys::AbstractSimpleSystem)    = SimpleVelocitySystem(sys)
 
 function AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}, i::BitVector)
+    @argcheck length(sys) == length(i)
     j = (1:length(sys))[i]
     return AtomicPropertySystem(sys, j)
 end
@@ -97,7 +89,10 @@ function AtomsBase.mass(sys::AtomicPropertySystem{D, LU, TB, TP, true}, i::Int) 
     return getindex(sys.atom_properties[i], :mass)
 end
 function AtomsBase.mass(sys::AtomicPropertySystem{D, LU, TB, TP, true}, i) where {D, LU, TB, TP}
-    return getindex.(sys.atom_properties[i], :mass)
+    return [ mass(sys, j)  for j in i ]
+end
+function AtomsBase.mass(sys::AtomicPropertySystem{D, LU, TB, TP, true}, ::Colon) where {D, LU, TB, TP}
+    return mass(sys, 1:length(sys))
 end
 
 function AtomsBase.mass(sys::AtomicPropertySystem{D, LU, TB, TP, false}, i) where {D, LU, TB, TP}
