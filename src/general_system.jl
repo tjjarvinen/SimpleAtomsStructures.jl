@@ -125,4 +125,16 @@ function GenericSystem(prs::AbstractVector{<:Pair}; kwargs...)
     return GenericSystem( SimpleAtom.(prs); kwargs... )
 end
 
-GenericSystem(sys::AbstractSystem, i) = CellSystem(sys, i)
+function GenericSystem(sys::AbstractSystem, i; kwargs...)
+    return GenericSystem(CellSystem(sys, i); kwargs...)
+end
+
+function GenericSystem(sys::AbstractSystem, vspc::ChemicalSpecies...; kwargs...)
+    tmp = sum( vspc ) do spc
+        CellSystem(sys, spc)
+    end
+    if length(kwargs) > 0
+        return GeneralSystem(tmp; kwargs...)
+    end
+    return tmp
+end
