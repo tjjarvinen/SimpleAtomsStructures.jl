@@ -1,15 +1,18 @@
 
+# This might not be the most efficient implementation due to
+# check that position and velocity have same dimensions
+# so it might need an update
 struct SimpleAtom{D, TD, TP}
     data::TD
     function SimpleAtom(
         spc::ChemicalSpecies, 
         r::AbstractVector{<:Unitful.Length}; 
-        kwords...
+        kwargs...
     )   
-        if haskey(kwords, :velocity) && length(kwords[:velocity]) != length(r)
+        if haskey(kwargs, :velocity) && length(kwargs[:velocity]) != length(r)
             throw( ArgumentError("Position and velocity have different dimensions") )
         end
-        tmp = ( species=spc, position=SVector(r...), kwords... )
+        tmp = ( species=spc, position=SVector(r...), kwargs... )
         new{length(r), typeof(tmp), eltype(r)}(tmp)
     end
     function SimpleAtom(data::NamedTuple)
@@ -36,6 +39,13 @@ function SimpleAtom(sa::SimpleAtom; kwargs...)
     return SimpleAtom( NamedTuple( tmp ) )
 end
 
+function SimpleAtom(id::AtomsBase.AtomId, r::AbstractVector{<:Unitful.Length}; kwargs...)
+    return SimpleAtom(ChemicalSpecies(id), r; kwargs...)
+end
+
+function SimpleAtom(pr::Pair; kwargs...)
+    return SimpleAtom(pr[1], pr[2]; kwargs...)
+end
 
 AtomsBase.n_dimensions(::SimpleAtom{D, TD}) where {D, TD} = D
 

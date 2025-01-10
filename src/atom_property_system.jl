@@ -47,8 +47,9 @@ end
 
 AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}, ::Colon) = AtomicPropertySystem(sys, 1:length(sys))
 AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector})          = AtomicPropertySystem(sys, :)
-AtomicPropertySystem(sys::AbstractSimpleSystem, i) = SimpleVelocitySystem(sys, i)
-AtomicPropertySystem(sys::AbstractSimpleSystem)    = SimpleVelocitySystem(sys)
+AtomicPropertySystem(sys::AbstractSimpleSystem, ::Colon) = SimpleVelocitySystem(sys, :)
+AtomicPropertySystem(sys::AbstractSimpleSystem, i)       = SimpleVelocitySystem(sys, i)
+AtomicPropertySystem(sys::AbstractSimpleSystem)          = SimpleVelocitySystem(sys)
 
 function AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}, i::BitVector)
     @argcheck length(sys) == length(i)

@@ -8,7 +8,6 @@ using Unitful
 
 export AtomicPropertySystem
 export CellSystem
-export GeneralSystem
 export GenericSystem
 export get_subsystem
 export SimpleAtom

@@ -43,6 +43,8 @@ function GenericSystem(sys::AbstractSystem; kwargs...)
         new_cell = PeriodicCell( kwargs[:cell_vectors], periodicity(sys) )
     elseif haskey(kwargs, :periodicity) && isa(cell(sys), PeriodicCell)
         new_cell = PeriodicCell( cell_vectors(sys), kwargs[:periodicity] )
+    elseif haskey(kwargs, :cell)
+        new_cell = kwargs[:cell]
     elseif isa(cell(sys), IsolatedCell) &&
             ( haskey(kwargs, :cell_vectors) || haskey(kwargs, :periodicity))
         throw( ArgumentError("Not enough information to update cell") )
@@ -118,5 +120,9 @@ function GenericSystem(
     return tmp
 end
 
+
+function GenericSystem(prs::AbstractVector{<:Pair}; kwargs...)
+    return GenericSystem( SimpleAtom.(prs); kwargs... )
+end
 
 GenericSystem(sys::AbstractSystem, i) = CellSystem(sys, i)
