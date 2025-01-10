@@ -117,3 +117,6 @@ function GenericSystem(
     end
     return tmp
 end
+
+
+GenericSystem(sys::AbstractSystem, i) = CellSystem(sys, i)
