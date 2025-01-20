@@ -59,7 +59,7 @@ using Test
     end
     @testset "GeneralSystem" begin
         sys = GenericSystem(ref.system)
-        @test isa(sys, GeneralSystem)
+        @test isa(sys, SimpleAtomsStructures.GeneralSystem)
         @test all( position(sys, :) .≈ position( ref.system, :) )
         @test all( velocity(sys, :) .≈ velocity( ref.system, :) )
         @test all( species(sys, :) .== species( ref.system, :) )
