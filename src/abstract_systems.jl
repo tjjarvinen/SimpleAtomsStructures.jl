@@ -42,3 +42,10 @@ function AtomsBase.set_position!(sys::AbstractSimpleSystem, i, x)
     setindex!(sys.position, x, i)
     return sys
 end
+
+function AtomsBase.set_position!(sys::AbstractSimpleSystem{D}, ::Colon, x::AbstractMatrix{<:Unitful.Length}) where{D}
+    @argcheck size(x, 2) == length(sys)
+    tmp = reinterpret(reshape, SVector{D, eltype(x)}, x)
+    AtomsBase.set_position!(sys, :, tmp)
+    return sys
+end

@@ -76,6 +76,7 @@ function AtomsBase.atomkeys(sys::AtomicPropertySystem)
     base_keys = AtomsBase.atomkeys(sys.base_system)
     property_keys = _property_keys(sys)
     # remove double mass
+    # This is most likely wrong. Need to fix it
     if :mass in property_keys
         base_keys = Tuple( x for x in base_keys if x !=:mass  )
     end

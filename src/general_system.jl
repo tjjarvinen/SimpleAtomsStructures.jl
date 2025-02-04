@@ -32,6 +32,27 @@ end
 Base.haskey(sys::GeneralSystem, x::Symbol) = in(x, keys(sys))
 
 
+function AtomsBase.set_cell_vectors!(sys::GeneralSystem, x)
+    sys = AtomsBase.set_cell_vectors!(sys.base_system, x)
+    return sys
+end
+
+function AtomsBase.set_periodicity!(sys::GeneralSystem, x)
+    sys = AtomsBase.set_periodicity!(sys.base_system, x)
+    return sys
+end
+
+function AtomsBase.set_cell!(sys::GeneralSystem, x)
+    sys = AtomsBase.set_cell!(sys.base_system, x)
+    return sys
+end
+
+function AtomsBase.set_cell!(sys::GeneralSystem, x::IsolatedCell)
+    tmp = AtomsBase.set_cell!(sys.base_system, x)
+    return GeneralSystem(tmp; sys.properties...)
+end
+
+
 ## Generic builders
 
 function GenericSystem(sys::AbstractSystem; kwargs...)

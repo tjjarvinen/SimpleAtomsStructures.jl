@@ -4,7 +4,7 @@ module SimpleAtomsStructures
 using ArgCheck
 using AtomsBase
 using Compat
-using LinearAlgebra: cross, dot, norm
+using LinearAlgebra: cross, dot, norm, I
 using Rotations
 using StaticArrays
 using Unitful
