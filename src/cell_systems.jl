@@ -69,7 +69,7 @@ function AtomsBase.set_cell_vectors!(sys::CellSystem{D}, cell_matrix::SMatrix{D,
     return sys
 end
 
-function AtomsBase.set_cell_vectors!(sys::CellSystem{D}, new_vectors::Vararg{ <:AbstractVector{<:Unitful.Length} , D}) where{D}
+function AtomsBase.set_cell_vectors!(sys::CellSystem{D}, new_vectors::Vararg{ AbstractVector{<:Unitful.Length} , D}) where{D}
     nc = reduce(hcat, new_vectors)
     return AtomsBase.set_cell_vectors!(sys, nc)
 end

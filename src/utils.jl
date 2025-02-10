@@ -127,8 +127,9 @@ Base.:-(sys::AbstractSystem{D}, r::SVector{D, <:Unitful.Length}) where{D} = +(sy
 
 
 function rotate_system!(sys::AbstractIsolatedSystem, r::Rotation)
+    # does not work for all systems in general (e.g. FlexibleSystem)
     pos = position_as_matrix(sys, :)
-    pos .*= r
+    pos .= r * pos
     return sys
 end
 
@@ -212,7 +213,7 @@ and `r_jk` (from atom `j` to atom `k`).
 
 See also `angled`.
 """
-function angle(sys, i::Int, j::Int, k::Int)
+function Base.angle(sys, i::Int, j::Int, k::Int)
     r1 = distance_vector(sys, j, i)
     r2 = distance_vector(sys, j, k)
     return acos(dot(r1,r2)/sqrt(dot(r1,r1)*dot(r2,r2)))
@@ -275,8 +276,8 @@ end
 
 ##
 
-
-function Base.repeat(sys::CellSystem{3}, n::NTuple{3,Int}) # where{D}
+# make this with generating function for more dimensions
+function Base.repeat(sys::CellSystem{3}, n::NTuple{3,<:Integer}) # where{D}
     abc = cell_vectors(sys)
     abc_n = n .* abc
     cell = PeriodicCell(abc_n, periodicity(sys))
@@ -292,9 +293,9 @@ function Base.repeat(sys::CellSystem{3}, n::NTuple{3,Int}) # where{D}
     return nsys
 end
 
-Base.repeat(sys::CellSystem{3}, n::Int) = Base.repeat(sys, (n,n,n))
+Base.repeat(sys::CellSystem{3}, n::Integer) = Base.repeat(sys, (n,n,n))
 
-Base.:*(sys::CellSystem{3}, n::Int) = Base.repeat(sys, n)
-Base.:*(sys::CellSystem{3}, n::NTuple{3,Int}) = Base.repeat(sys, n)
-Base.:*(n::Int, sys::CellSystem{3}) = Base.repeat(sys, n)
-Base.:*(n::NTuple{3,Int}, sys::CellSystem{3}) = Base.repeat(sys, n)
+Base.:*(sys::CellSystem{3}, n::Integer) = Base.repeat(sys, n)
+Base.:*(sys::CellSystem{3}, n::NTuple{3,<:Integer}) = Base.repeat(sys, n)
+Base.:*(n::Integer, sys::CellSystem{3}) = Base.repeat(sys, n)
+Base.:*(n::NTuple{3,<:Integer}, sys::CellSystem{3}) = Base.repeat(sys, n)

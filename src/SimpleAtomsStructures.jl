@@ -17,7 +17,6 @@ export SimpleSystem
 export SimpleVelocitySystem
 
 # utilities
-export angle
 export angled
 export cell_matrix
 export center_of_mass

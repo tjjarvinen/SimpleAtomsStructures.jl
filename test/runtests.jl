@@ -1,6 +1,7 @@
 using AtomsBase
 using AtomsBaseTesting
 using SimpleAtomsStructures
+using Rotations
 using Test
 
 @testset "SimpleAtomsStructures.jl" begin
@@ -77,9 +78,28 @@ using Test
         @test all( [all(sys[k] .== v) for (k,v) in pairs(ref.sysprop)] )
         @test_throws KeyError sys[:dummy]
     end
+    @testset "Utils" begin
+        sys = SimpleSystem(ref.system)
+        r = RotX(π/2)
+        sys2 = sys * r
+        @test all( i-> position(sys2, i) ≈ r * position(sys, i), 1:length(sys) )
+        @test angle(sys, 1, 2, 3) ≈ angle(sys2, 1, 2, 3)
+        @test angled(sys, 1, 2, 3) ≈ angled(sys2, 1, 2, 3)
+        @test dihedral_angle(sys, 1,2,3,4) ≈ dihedral_angle(sys2, 1,2,3,4)
+        @test dihedral_angled(sys, 1,2,3,4) ≈ dihedral_angled(sys2, 1,2,3,4)
+        @test distance_vector(sys2, 1, 2) ≈ r * distance_vector(sys, 1, 2) 
+
+        sys3 = sys + sys2
+        @test length(sys3) == length(sys) + length(sys2)
+    end
     @testset "SimpleAtom" begin
         sys = GenericSystem(ref.system)
         va = sys[:]
-        
+        @test all( k -> k in atomkeys(sys), atomkeys(va) )
+        @test all( k -> k in atomkeys(va), atomkeys(sys) )
+        @test all( mass(va, :) .≈ mass(sys, :) )
+        @test all( species(va, :) .== species(sys, :) )
+        @test all( position(va, :) .≈ position(sys, :) )
+        @test all( velocity(va, :) .≈ velocity(sys, :) )
     end
 end
