@@ -80,25 +80,38 @@ using Test
     end
     @testset "Utils" begin
         sys = SimpleSystem(ref.system)
-        r = RotX(π/2)
-        sys2 = sys * r
-        @test all( i-> position(sys2, i) ≈ r * position(sys, i), 1:length(sys) )
+        # rotation tests
+        q = rand(QuatRotation)
+        sys2 = sys * q
+        @test all( i-> position(sys2, i) ≈ q * position(sys, i), 1:length(sys) )
         @test angle(sys, 1, 2, 3) ≈ angle(sys2, 1, 2, 3)
         @test angled(sys, 1, 2, 3) ≈ angled(sys2, 1, 2, 3)
         @test dihedral_angle(sys, 1,2,3,4) ≈ dihedral_angle(sys2, 1,2,3,4)
         @test dihedral_angled(sys, 1,2,3,4) ≈ dihedral_angled(sys2, 1,2,3,4)
-        @test distance_vector(sys2, 1, 2) ≈ r * distance_vector(sys, 1, 2)
+        @test distance_vector(sys2, 1, 2) ≈ q * distance_vector(sys, 1, 2)
+
+        # translation tests
+        cms = center_of_mass(sys)
+        sys2 = sys - cms
+        @test all( i-> position(sys2, i) ≈ position(sys, i) - cms, 1:length(sys) )
+        @test angle(sys, 1, 2, 3) ≈ angle(sys2, 1, 2, 3)
+        @test angled(sys, 1, 2, 3) ≈ angled(sys2, 1, 2, 3)
+        @test dihedral_angle(sys, 1,2,3,4) ≈ dihedral_angle(sys2, 1,2,3,4)
+        @test dihedral_angled(sys, 1,2,3,4) ≈ dihedral_angled(sys2, 1,2,3,4)
+        @test distance_vector(sys2, 1, 2) ≈ distance_vector(sys, 1, 2)
+
+        
+        sys3 = sys + sys2
+        @test length(sys3) == length(sys) + length(sys2)
+        
+        # now with cell
+        sys = GenericSystem(ref.system)
 
         fp = fractional_coordinates(sys, :)
         @test length(fp) == length(sys)
         fpm = fractional_coordinates_as_matrix(sys, :)
         @test size(fpm) == (3, length(sys))
 
-        
-        sys3 = sys + sys2
-        @test length(sys3) == length(sys) + length(sys2)
-        
-        sys = GenericSystem(ref.system)
         clm = cell_matrix(sys)
         clv = cell_vectors(sys)
         @test size(clm) == (3,3)
