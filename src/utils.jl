@@ -12,6 +12,11 @@ function center_of_mass(sys)
     return cms
 end
 
+"""
+    inv_cell(sys)
+
+Return the inverse of the cell matrix of the AbstractSystem `sys` or cell.
+"""
 function inv_cell(sys)
     abc = cell_vectors(sys)
     # ignore dimensions with infinities in the cell vectors
@@ -48,6 +53,11 @@ function cell_matrix(sys)
     return reduce(hcat, abc)
 end
 
+"""
+    fractional_coordinates_as_matrix(sys, i)
+
+Return the fractional coordinates of atom(s) `i` in the system `sys` as a matrix.
+"""
 function fractional_coordinates_as_matrix(sys::AbstractSystem, i)
     abc_inv = inv_cell(sys)
     r = position_as_matrix(sys, i)
@@ -68,7 +78,11 @@ function fractional_coordinates(sys::AbstractSystem{D}, i) where{D}
     return reinterpret(reshape, SVector{D, eltype(tmp)}, tmp)
 end
 
+"""
+    position_as_matrix(sys, i)
 
+Return the position of atom(s) `i` in the system `sys` as a matrix.
+""" 
 function position_as_matrix(sys::AbstractSystem, i)
     tmp = position(sys, i)
     ET = (eltype∘eltype)(tmp)
@@ -106,6 +120,11 @@ function translate_system!(sys::AbstractSystem{D}, r::SVector{D, <:Unitful.Lengt
     return sys
 end
 
+"""
+    translate_system!(sys, r)
+
+Translate the system `sys` by the vector `r`.
+"""
 function translate_system!(sys::AbstractSystem{D}, r::AbstractVector{<:Unitful.Length}) where{D}
     @argcheck length(r) == D
     translate_system!(sys, SVector(r...))
@@ -125,7 +144,13 @@ end
 Base.:+(r::AbstractVector{<:Unitful.Length}, sys::AbstractSystem{D}) where{D} = +(sys, r)
 Base.:-(sys::AbstractSystem{D}, r::SVector{D, <:Unitful.Length}) where{D} = +(sys, -r)
 
+"""
+    rotate_system!(sys, r)
 
+Rotate the system `sys` by the rotation `r`.
+
+Note, this function does work only for isolated systems.
+"""
 function rotate_system!(sys::AbstractIsolatedSystem, r::Rotation)
     # does not work for all systems in general (e.g. FlexibleSystem)
     pos = position_as_matrix(sys, :)
