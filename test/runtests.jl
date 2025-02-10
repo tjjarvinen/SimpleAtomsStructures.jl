@@ -87,10 +87,24 @@ using Test
         @test angled(sys, 1, 2, 3) ≈ angled(sys2, 1, 2, 3)
         @test dihedral_angle(sys, 1,2,3,4) ≈ dihedral_angle(sys2, 1,2,3,4)
         @test dihedral_angled(sys, 1,2,3,4) ≈ dihedral_angled(sys2, 1,2,3,4)
-        @test distance_vector(sys2, 1, 2) ≈ r * distance_vector(sys, 1, 2) 
+        @test distance_vector(sys2, 1, 2) ≈ r * distance_vector(sys, 1, 2)
 
+        fp = fractional_coordinates(sys, :)
+        @test length(fp) == length(sys)
+        fpm = fractional_coordinates_as_matrix(sys, :)
+        @test size(fpm) == (3, length(sys))
+
+        
         sys3 = sys + sys2
         @test length(sys3) == length(sys) + length(sys2)
+        
+        sys = GenericSystem(ref.system)
+        clm = cell_matrix(sys)
+        clv = cell_vectors(sys)
+        @test size(clm) == (3,3)
+        @test all( x -> all(x[1] .≈ x[2]), zip(clv, eachcol(clm)) )
+        icell = inv_cell(sys)
+        tmp = icell * clm
     end
     @testset "SimpleAtom" begin
         sys = GenericSystem(ref.system)
