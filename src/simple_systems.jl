@@ -114,7 +114,7 @@ function SimpleVelocitySystem(ss::Union{AbstractSystem,AtomsVector}, spc::Chemic
     return SimpleVelocitySystem(ss, i)
 end
 
-Base.getindex(ss::SimpleVelocitySystem, i::Int) = SimpleAtom(ss.species[i], ss.position[i]; velocity=ss.velocity[i])
+Base.getindex(ss::SimpleVelocitySystem, i::Int) = SimpleAtom(ss.species[i], ss.position[i], ss.velocity[i])
 
 AtomsBase.atomkeys(::SimpleVelocitySystem) = (:position, :velocity, :species)
 AtomsBase.cell(::SimpleVelocitySystem{D, LU, UV, TP, TV}) where{D, LU,UV, TP, TV} = IsolatedCell(D, TP)

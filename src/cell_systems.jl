@@ -58,3 +58,33 @@ function Base.:+(sys1::T, sys2::T) where{T<:CellSystem}
     append!(tmp, sys2)
     return tmp
 end
+
+##
+
+function AtomsBase.set_cell_vectors!(sys::CellSystem{D}, cell_matrix::SMatrix{D,D, <:Unitful.Length}) where{D}
+    fpos = fractional_coordinates_as_matrix(sys, :)
+    new_pos = cell_matrix * fpos
+    AtomsBase.set_position!(sys, :, new_pos)
+    sys.cell = PeriodicCell( Tuple( x for x in eachcol(cell_matrix) ), periodicity(sys) )
+    return sys
+end
+
+function AtomsBase.set_cell_vectors!(sys::CellSystem{D}, new_vectors::Vararg{ AbstractVector{<:Unitful.Length} , D}) where{D}
+    nc = reduce(hcat, new_vectors)
+    return AtomsBase.set_cell_vectors!(sys, nc)
+end
+
+function AtomsBase.set_periodicity!(sys::CellSystem{D}, periodicity::NTuple{D, Bool}) where{D}
+    sys.cell = PeriodicCell( cell_vectors(sys), periodicity )
+    return sys
+end
+
+function AtomsBase.set_cell!(sys::CellSystem{D}, ::IsolatedCell{D}) where{D}
+    sys = sys.base_system
+    return sys
+end
+
+function AtomsBase.set_cell!(sys::CellSystem{D}, cell::PeriodicCell{D}) where{D}
+    AtomsBase.set_cell_vectors!(sys, cell_matrix(cell))
+    return sys
+end

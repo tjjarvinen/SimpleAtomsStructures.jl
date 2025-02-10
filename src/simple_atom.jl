@@ -21,6 +21,19 @@ struct SimpleAtom{D, TD, TP}
         @argcheck ! ( haskey(data, :velocity) && length(data.velocity) != length(data.position) )
         new{length(data.position), typeof(data), eltype(data.position)}(data)
     end
+    function SimpleAtom(spc::ChemicalSpecies, r::SVector{D, TP}) where{D, TP<:Unitful.Length}
+        tmp = ( species=spc, position=r)
+        new{D, typeof(tmp), TP}(tmp)
+    end
+    function SimpleAtom(
+        spc::ChemicalSpecies,
+        r::SVector{D, TP},
+        v::SVector{D, <:Unitful.Velocity};
+        kwargs...
+    ) where{D, TP<:Unitful.Length}
+        tmp = ( species=spc, position=r, velocity=v, kwargs... )
+        new{D, typeof(tmp), TP}(tmp)
+    end
 end
 
 function SimpleAtom(at::Union{AtomsBase.Atom, AtomsBase.AtomView})

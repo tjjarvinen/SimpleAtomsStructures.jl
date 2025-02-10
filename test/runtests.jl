@@ -1,6 +1,7 @@
 using AtomsBase
 using AtomsBaseTesting
 using SimpleAtomsStructures
+using Rotations
 using Test
 
 @testset "SimpleAtomsStructures.jl" begin
@@ -77,9 +78,55 @@ using Test
         @test all( [all(sys[k] .== v) for (k,v) in pairs(ref.sysprop)] )
         @test_throws KeyError sys[:dummy]
     end
+    @testset "Utils" begin
+        sys = SimpleSystem(ref.system)
+        # rotation tests
+        q = rand(QuatRotation)
+        sys2 = sys * q
+        @test all( i-> position(sys2, i) ≈ q * position(sys, i), 1:length(sys) )
+        @test angle(sys, 1, 2, 3) ≈ angle(sys2, 1, 2, 3)
+        @test angled(sys, 1, 2, 3) ≈ angled(sys2, 1, 2, 3)
+        @test dihedral_angle(sys, 1,2,3,4) ≈ dihedral_angle(sys2, 1,2,3,4)
+        @test dihedral_angled(sys, 1,2,3,4) ≈ dihedral_angled(sys2, 1,2,3,4)
+        @test distance_vector(sys2, 1, 2) ≈ q * distance_vector(sys, 1, 2)
+
+        # translation tests
+        cms = center_of_mass(sys)
+        sys2 = sys - cms
+        @test all( i-> position(sys2, i) ≈ position(sys, i) - cms, 1:length(sys) )
+        @test angle(sys, 1, 2, 3) ≈ angle(sys2, 1, 2, 3)
+        @test angled(sys, 1, 2, 3) ≈ angled(sys2, 1, 2, 3)
+        @test dihedral_angle(sys, 1,2,3,4) ≈ dihedral_angle(sys2, 1,2,3,4)
+        @test dihedral_angled(sys, 1,2,3,4) ≈ dihedral_angled(sys2, 1,2,3,4)
+        @test distance_vector(sys2, 1, 2) ≈ distance_vector(sys, 1, 2)
+
+        
+        sys3 = sys + sys2
+        @test length(sys3) == length(sys) + length(sys2)
+        
+        # now with cell
+        sys = GenericSystem(ref.system)
+
+        fp = fractional_coordinates(sys, :)
+        @test length(fp) == length(sys)
+        fpm = fractional_coordinates_as_matrix(sys, :)
+        @test size(fpm) == (3, length(sys))
+
+        clm = cell_matrix(sys)
+        clv = cell_vectors(sys)
+        @test size(clm) == (3,3)
+        @test all( x -> all(x[1] .≈ x[2]), zip(clv, eachcol(clm)) )
+        icell = inv_cell(sys)
+        tmp = icell * clm
+    end
     @testset "SimpleAtom" begin
         sys = GenericSystem(ref.system)
         va = sys[:]
-        
+        @test all( k -> k in atomkeys(sys), atomkeys(va) )
+        @test all( k -> k in atomkeys(va), atomkeys(sys) )
+        @test all( mass(va, :) .≈ mass(sys, :) )
+        @test all( species(va, :) .== species(sys, :) )
+        @test all( position(va, :) .≈ position(sys, :) )
+        @test all( velocity(va, :) .≈ velocity(sys, :) )
     end
 end
