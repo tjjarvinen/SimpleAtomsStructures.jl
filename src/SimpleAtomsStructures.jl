@@ -17,6 +17,7 @@ export SimpleSystem
 export SimpleVelocitySystem
 export SystemView
 export Trajectory
+export VelocityTrajectory
 
 # utilities
 export angled
