@@ -15,6 +15,8 @@ export GenericSystem
 export SimpleAtom
 export SimpleSystem
 export SimpleVelocitySystem
+export SystemView
+export Trajectory
 
 # utilities
 export angled
@@ -45,5 +47,6 @@ include("atom_property_system.jl")
 include("cell_systems.jl")
 include("general_system.jl")
 include("utils.jl")
+include("trajectory.jl")
 
 end

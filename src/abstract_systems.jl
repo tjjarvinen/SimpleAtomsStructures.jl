@@ -3,6 +3,7 @@ abstract type AbstractCompositeSystem{D, LU} <: AtomsBase.AbstractSystem{D}    e
 abstract type AbstractIsolatedSystem{D, LU}  <: AbstractCompositeSystem{D, LU} end
 abstract type AbstractSimpleSystem{D, LU}    <: AbstractIsolatedSystem{D, LU}  end
 
+abstract type AbstractTrajectory{D, LU} <: AbstractVector{AbstractSystem{D}} end
 
 ## Defive some properties
 
