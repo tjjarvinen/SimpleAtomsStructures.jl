@@ -10,7 +10,7 @@ struct SystemView{D, LU, TT} <: AtomsBase.AbstractSystem{D}
 end
 
 function Base.getindex(sv::SystemView, i::Int)
-    return SimpleAtom(species(sv, i), position(sv, i))
+    return _get_atom(sv.parent_trajectory, i, sv.frame)
 end
 
 function Base.length(sv::SystemView)
@@ -57,13 +57,13 @@ mutable struct Trajectory{D, LU, TP, TC} <: AbstractTrajectory{D, LU}
         @argcheck length(spc) == length(pos)
         LU = unit(TP)
         # need copies to not break things - trajectory is mutable
-        tmp = ( species=deepcopy(spc), natoms=length(spc), cell=cell )
-        new{D, LU, TP, typeof(tmp)}( tmp, deepcopy(pos))
+        tmp = ( species=deepcopy(spc), cell=cell, natoms=length(spc))
+        new{D, LU, TP, typeof(tmp)}( tmp, deepcopy(pos) )
     end    
 end
 
 
-mutable struct VelocityTrajectory{D, LU, TP, TV, TC} <: AbstractTrajectory{D, LU}
+mutable struct VelocityTrajectory{D, LU, TP, TC, TV} <: AbstractTrajectory{D, LU}
     constants::TC
     position::Vector{SVector{D, TP}}
     velocity::Vector{SVector{D, TV}}
@@ -75,8 +75,8 @@ mutable struct VelocityTrajectory{D, LU, TP, TV, TC} <: AbstractTrajectory{D, LU
     ) where {D, TP, TV}
         @argcheck length(spc) == length(pos) == length(vel)
         LU = unit(TP)
-        tmp = ( species=deepcopy(spc), natoms=length(spc), cell=cell )
-        new{D, LU, TP, TV, typeof(tmp)}(
+        tmp = ( species=deepcopy(spc), cell=cell, natoms=length(spc))
+        new{D, LU, TP, typeof(tmp), TV}(
             tmp,
             deepcopy(pos),
             deepcopy(vel),
@@ -114,6 +114,14 @@ function VelocityTrajectory(vsys::AbstractVector{<:AbstractSystem})
 end
 
 ##
+
+function _get_atom(traj::Trajectory, i::Int, frame::Int)
+    #tmp = NamedTuple( k=>v[i] for (k,v) in pairs(traj.constants.atom_constants)  )
+    #return SimpleAtom(species(traj, i, frame), position(traj, i, frame); tmp...)
+    return SimpleAtom(species(traj, i, frame), position(traj, i, frame))
+end
+
+
 
 function Base.length(trj::AbstractTrajectory)
     return length(trj.position) // trj.constants.natoms |> Int
@@ -233,9 +241,9 @@ end
 Base.haskey(trj::Trajectory, x::Symbol) = in(x, keys(trj) )
 Base.keys(::Trajectory) = (:cell_vectors, :periodicity)
 
-AtomsBase.atomkeys(::Trajectory) = (:position, :species)
+AtomsBase.atomkeys(trj::Trajectory) = (:position, :species, keys(trj.constants.atom_constants)...)
 AtomsBase.hasatomkey(trj::AbstractTrajectory, key) = key in atomkeys(trj)
-AtomsBase.atomkeys(::VelocityTrajectory) = (:position, :velocity, :species)
+AtomsBase.atomkeys(trj::VelocityTrajectory) = (:position, :velocity, :species, keys(trj.constants.atom_constants)...)
 
 
 AtomsBase.species(trj::AbstractTrajectory, i, frame) = species(trj, i)
@@ -244,7 +252,22 @@ AtomsBase.species(trj::AbstractTrajectory, ::Colon) = trj.constants.species
 AtomsBase.species(tra::AbstractTrajectory, i::Int) = tra.constants.species[i]
 
 AtomsBase.mass(trj::AbstractTrajectory, i, frame) = mass(trj, i)
-AtomsBase.mass(trj::AbstractTrajectory, i) = mass.( species(trj, i) )
+function AtomsBase.mass(trj::AbstractTrajectory, i)
+    if haskey(trj.constants.atom_constants, :mass)
+        @view trj.constants.atom_constants.mass[i]
+    else
+        mass.( species(trj, i) )
+    end
+end
+
+function AtomsBase.mass(trj::AbstractTrajectory, i::Int)
+    if haskey(trj.constants.atom_constants, :mass)
+        trj.constants.atom_constants.mass[i]
+    else
+        mass( species(trj, i) )
+    end
+end
+
 AtomsBase.cell(trj::AbstractTrajectory) = trj.constants.cell
 AtomsBase.cell(trj::AbstractTrajectory, ::Int) = trj.constants.cell
 AtomsBase.periodicity(trj::AbstractTrajectory, frame) = periodicity(cell(trj, frame)) 
