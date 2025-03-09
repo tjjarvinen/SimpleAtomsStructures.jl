@@ -20,6 +20,7 @@ Return the inverse of the cell matrix of the AbstractSystem `sys` or cell.
 function inv_cell(sys)
     abc = cell_vectors(sys)
     # ignore dimensions with infinities in the cell vectors
+    # by replacing them with the unit vector
     abc = map( enumerate(abc) ) do (i, v)
         if all( x -> x.val != Inf, v )
             return v
@@ -70,13 +71,33 @@ fractional_coordinates_as_matrix(sys::AbstractSystem, i::Int) =
 function fractional_coordinates(sys::AbstractSystem, i::Int)
     abc_inv = inv_cell(sys)
     r = position(sys, i)
-    return abc_inv * r
+    return SVector( (abc_inv * r)... )
 end
 
 function fractional_coordinates(sys::AbstractSystem{D}, i) where{D}
     tmp = fractional_coordinates_as_matrix(sys, i)
     return reinterpret(reshape, SVector{D, eltype(tmp)}, tmp)
 end
+
+function fractional_coordinates_as_matrix(cell::PeriodicCell{D}, coord::AbstractVector{SVector{D,T}}) where{D,T<:Unitful.Length}
+    inv_cell_matrix = inv_cell(cell)
+    rf = inv_cell_matrix * reinterpret(reshape, T, coord)
+    return rf
+end
+
+function fractional_coordinates(cell::PeriodicCell{D}, coord::AbstractArray{SVector{D,T}}) where{D,T<:Unitful.Length}
+    s = size(coord)
+    rf = fractional_coordinates_as_matrix(cell, vec(coord))
+    tmp = reinterpret(reshape, SVector{D,eltype(rf)}, rf)
+    return Array( reshape(tmp, s) ) # Clear type a bit
+end
+
+function fractional_coordinates(cell::PeriodicCell{D}, coord::SVector{D,T}) where{D,T<:Unitful.Length}
+    inv_cell_matrix = inv_cell(cell)
+    rf = inv_cell_matrix * coord
+    return rf    
+end
+
 
 """
     position_as_matrix(sys, i)
@@ -108,6 +129,26 @@ function wrap_coordinates!(sys)
 end
 
 wrap_coordinates!(sys::AbstractIsolatedSystem) = sys
+
+function wrap_coordinates!(cell::PeriodicCell{D}, coord::AbstractVector{SVector{D,T}}) where{D, T<:Unitful.Length}
+    @argcheck all( periodicity(cell) )
+    wrap(x) = x > 0 ? x-ceil(x)+1 : x-floor(x) # 0 <= x < 1
+    frc = fractional_coordinates_as_matrix(cell, coord)
+    frc .= wrap.(frc)
+    abc_matrix = cell_matrix(cell)
+    tmp = abc_matrix * frc
+    return reinterpret(reshape, SVector{D,T}, tmp)
+end
+
+function wrap_coordinates!(cell::PeriodicCell{D}, coord::AbstractArray{SVector{D,T}}) where{D, T<:Unitful.Length}
+    s = size(coord)
+    rf = wrap_coordinates!(cell, vec(coord))
+    return Array( reshape(rf, s) )  # Clear type a bit
+end
+
+function wrap_coordinates!(cell::PeriodicCell{D}, coord::SVector{D,T}) where{D,T<:Unitful.Length}
+    return wrap_coordinates!(cell, [coord])[1]
+end
 
 
 function translate_system!(sys::AbstractSystem{D}, r::SVector{D, <:Unitful.Length}) where{D}
@@ -187,11 +228,17 @@ function distance_vector(sys::Union{AbstractIsolatedSystem, AtomsVector}, i::Int
 end
 
 
-function distance_vector(sys::CellSystem, i::Int, j::Int)
-    # only works for orthorombic cells
-    @argcheck periodicity(sys) == (true, true, true)
+function distance_vector(sys::AbstractSystem, i::Int, j::Int)
+    r1 = fractional_coordinates(sys, i)
+    r2 = fractional_coordinates(sys, j)
+    return distance_vector(cell(sys), r2 - r1)
+end
+
+distance_vector(::IsolatedCell{D}, r::SVector{D}) where{D} = r
+
+function distance_vector(cell::PeriodicCell{D}, r::SVector{D}) where{D}
     wrap(x) = x > 0 ? x-ceil(x)+1 : x-floor(x) # 0 <= x < 1
-    function dwrap(x) # distance wrap
+    function dwrap(x) # distance wrap. x ∈ [-0.5, 0.5]
         if x > 0.5
             return x - 1
         elseif x < -0.5
@@ -200,16 +247,16 @@ function distance_vector(sys::CellSystem, i::Int, j::Int)
             return x
         end
     end
-    r1 = wrap.( fractional_coordinates(sys, i) )
-    r2 = wrap.( fractional_coordinates(sys, j) )
-    tmp = dwrap.( r2 - r1 )
-    cell = cell_matrix(sys)
-    return cell * tmp
+    Δr = map( r, periodicity(cell) ) do x, p
+        if p
+            return dwrap( wrap(x) )
+        else
+            return x
+        end
+    end
+    return cell_matrix(cell) * Δr
 end
 
-function distance_vector(sys::GeneralSystem, i::Int, j::Int)
-    return distance_vector(sys.base_system, i ,j)
-end
 
 """
     distance(sys, i, j)
