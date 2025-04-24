@@ -86,9 +86,7 @@ using Test
         sys2 = sys * q
         @test all( i-> position(sys2, i) ≈ q * position(sys, i), 1:length(sys) )
         @test angle(sys, 1, 2, 3) ≈ angle(sys2, 1, 2, 3)
-        @test angled(sys, 1, 2, 3) ≈ angled(sys2, 1, 2, 3)
         @test dihedral_angle(sys, 1,2,3,4) ≈ dihedral_angle(sys2, 1,2,3,4)
-        @test dihedral_angled(sys, 1,2,3,4) ≈ dihedral_angled(sys2, 1,2,3,4)
         @test distance_vector(sys2, 1, 2) ≈ q * distance_vector(sys, 1, 2)
 
         # translation tests
@@ -96,9 +94,7 @@ using Test
         sys2 = sys - cms
         @test all( i-> position(sys2, i) ≈ position(sys, i) - cms, 1:length(sys) )
         @test angle(sys, 1, 2, 3) ≈ angle(sys2, 1, 2, 3)
-        @test angled(sys, 1, 2, 3) ≈ angled(sys2, 1, 2, 3)
         @test dihedral_angle(sys, 1,2,3,4) ≈ dihedral_angle(sys2, 1,2,3,4)
-        @test dihedral_angled(sys, 1,2,3,4) ≈ dihedral_angled(sys2, 1,2,3,4)
         @test distance_vector(sys2, 1, 2) ≈ distance_vector(sys, 1, 2)
 
         

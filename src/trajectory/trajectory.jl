@@ -55,7 +55,7 @@ mutable struct SimpleTrajectory{D, LU, TP, TC} <: AbstractTrajectory{D, LU}
         @argcheck length(spc) == length(pos)
         LU = unit(TP)
         # need copies to not break things - trajectory is mutable
-        tmp = ( species=deepcopy(spc), cell=cell, natoms=length(spc))
+        tmp = ( atom_constants= (species=deepcopy(spc), ), cell=cell, natoms=length(spc))
         new{D, LU, TP, typeof(tmp)}( tmp, deepcopy(pos) )
     end    
 end
@@ -73,7 +73,7 @@ mutable struct VelocityTrajectory{D, LU, TP, TC, TV} <: AbstractTrajectory{D, LU
     ) where {D, TP, TV}
         @argcheck length(spc) == length(pos) == length(vel)
         LU = unit(TP)
-        tmp = ( species=deepcopy(spc), cell=cell, natoms=length(spc))
+        tmp = ( atom_constants= (species=deepcopy(spc), ), cell=cell, natoms=length(spc))
         new{D, LU, TP, typeof(tmp), TV}(
             tmp,
             deepcopy(pos),
@@ -267,9 +267,9 @@ AtomsBase.atomkeys(trj::VelocityTrajectory) = (:position, :velocity, :species, k
 
 
 AtomsBase.species(trj::AbstractTrajectory, i, frame) = species(trj, i)
-AtomsBase.species(trj::AbstractTrajectory, i) = view(trj.constants.species, i)
-AtomsBase.species(trj::AbstractTrajectory, ::Colon) = trj.constants.species
-AtomsBase.species(tra::AbstractTrajectory, i::Int) = tra.constants.species[i]
+AtomsBase.species(trj::AbstractTrajectory, i) = view(trj.constants.atom_constants.species, i)
+AtomsBase.species(trj::AbstractTrajectory, ::Colon) = trj.constants.atom_constants.species
+AtomsBase.species(tra::AbstractTrajectory, i::Int) = tra.constants.atom_constants.species[i]
 
 AtomsBase.mass(trj::AbstractTrajectory, i, frame) = mass(trj, i)
 function AtomsBase.mass(trj::AbstractTrajectory, i)
@@ -347,3 +347,54 @@ function AtomsBase.set_species!(trj::AbstractTrajectory, spc::AbstractVector{Che
 end
 
 ##
+
+
+function SimpleAtomsStructures.fractional_coordinates(traj::AbstractTrajectory, atom, frame)
+    pos = position(traj, atom, frame)
+    ce = cell(traj)
+    tmp = reinterpret(reshape, (eltype∘eltype)(pos), vec(pos))
+    tmp = SimpleAtomsStructures.inv_cell(ce) * tmp
+    tmp = reinterpret(reshape, SVector{3, eltype(tmp)}, tmp)
+    return reshape(tmp, size(pos))
+end
+
+function SimpleAtomsStructures.fractional_coordinates(traj::AbstractTrajectory, atom::Int, frame::Int)
+    SimpleAtomsStructures.fractional_coordinates(traj[frame], atom)
+end
+
+function SimpleAtomsStructures.distance_vector(traj::AbstractTrajectory, atom1::Int, atom2::Int, frame)
+    r = position(traj, atom1, frame)
+    r2 = position(traj, atom2, frame)
+    tmp = r2 .- r 
+    tmp = SimpleAtomsStructures.distance_vector(cell(traj), vec(tmp))
+    return reshape(tmp, size(r)) 
+end
+
+function SimpleAtomsStructures.distance_vector(traj::AbstractTrajectory, atom1::Int, atom2::Int, ::Colon)
+    r1 = position(traj, atom1, :)
+    r2 = position(traj, atom2, :)
+    Δr = r2 .- r1
+    return SimpleAtomsStructures.distance_vector(cell(traj), vec(Δr))
+end
+
+
+function _distance(traj::AbstractTrajectory, atom1, atom2, frame)
+    tmp = SimpleAtomsStructures.distance_vector(traj, atom1, atom2, frame)
+    return _extract_norm(tmp)
+end
+
+function SimpleAtomsStructures.distance(traj::AbstractTrajectory, atom1::Int, atom2::Int, frame::Int)
+    _distance(traj, atom1, atom2, frame)
+end
+
+function SimpleAtomsStructures.distance(traj::AbstractTrajectory, atom1::Int, atom2::Int, frame::Colon)
+    _distance(traj, atom1, atom2, frame)
+end
+
+function SimpleAtomsStructures.distance(traj::AbstractTrajectory, atom1::Int, atom2::Int, frames)
+    _distance(traj, atom1, atom2, frames)
+end
+
+
+_extract_norm(x::SVector) = norm(x)
+_extract_norm(x::AbstractVector{<:SVector}) = norm.(x)

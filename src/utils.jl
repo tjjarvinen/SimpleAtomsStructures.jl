@@ -1,3 +1,14 @@
+"""
+    position_as_matrix(sys, i)
+
+Return the position of atom(s) `i` in the system `sys` as a matrix.
+""" 
+function position_as_matrix(sys::AbstractSystem, i)
+    tmp = position(sys, i)
+    ET = (eltype∘eltype)(tmp)
+    return reinterpret(reshape, ET, tmp)
+end
+
 
 
 """
@@ -11,6 +22,8 @@ function center_of_mass(sys)
     cms = sum( m.*r ) / sum(m)
     return cms
 end
+
+## Inverse cell and cell matrix
 
 """
     inv_cell(sys)
@@ -54,60 +67,89 @@ function cell_matrix(sys)
     return reduce(hcat, abc)
 end
 
-"""
-    fractional_coordinates_as_matrix(sys, i)
+## Fractional coordinates
 
-Return the fractional coordinates of atom(s) `i` in the system `sys` as a matrix.
-"""
-function fractional_coordinates_as_matrix(sys::AbstractSystem, i)
-    abc_inv = inv_cell(sys)
-    r = position_as_matrix(sys, i)
-    return abc_inv * r
+
+function fractional_coordinates(
+    cell::Union{PeriodicCell{D}, IsolatedCell{D}},
+    r::SVector{D,T}
+) where{D,T}
+    abc_inv = inv_cell(cell)
+    return SVector(  (abc_inv * r)... )
 end
 
-fractional_coordinates_as_matrix(sys::AbstractSystem, i::Int) =
-    fractional_coordinates(sys, i)
-
-function fractional_coordinates(sys::AbstractSystem, i::Int)
-    abc_inv = inv_cell(sys)
-    r = position(sys, i)
-    return SVector( (abc_inv * r)... )
-end
-
-function fractional_coordinates(sys::AbstractSystem{D}, i) where{D}
-    tmp = fractional_coordinates_as_matrix(sys, i)
-    return reinterpret(reshape, SVector{D, eltype(tmp)}, tmp)
-end
-
-function fractional_coordinates_as_matrix(cell::PeriodicCell{D}, coord::AbstractVector{SVector{D,T}}) where{D,T<:Unitful.Length}
-    inv_cell_matrix = inv_cell(cell)
-    rf = inv_cell_matrix * reinterpret(reshape, T, coord)
-    return rf
-end
-
-function fractional_coordinates(cell::PeriodicCell{D}, coord::AbstractArray{SVector{D,T}}) where{D,T<:Unitful.Length}
+function fractional_coordinates(
+    cell::Union{PeriodicCell{D}, IsolatedCell{D}},
+    coord::AbstractArray{SVector{D,T}}
+) where{D,T<:Unitful.Length}
     s = size(coord)
     rf = fractional_coordinates_as_matrix(cell, vec(coord))
     tmp = reinterpret(reshape, SVector{D,eltype(rf)}, rf)
     return Array( reshape(tmp, s) ) # Clear type a bit
 end
 
-function fractional_coordinates(cell::PeriodicCell{D}, coord::SVector{D,T}) where{D,T<:Unitful.Length}
+function fractional_coordinates_as_matrix(
+    cell::Union{PeriodicCell{D}, IsolatedCell{D}},
+    coord::AbstractVector{SVector{D,T}}
+) where{D,T<:Unitful.Length}
     inv_cell_matrix = inv_cell(cell)
-    rf = inv_cell_matrix * coord
-    return rf    
+    rf = inv_cell_matrix * reinterpret(reshape, T, coord)
+    return rf
+end
+
+function fractional_coordinates_as_matrix(
+    cell::Union{PeriodicCell{D}, IsolatedCell{D}},
+    coord::SVector{D,T}
+) where{D,T<:Unitful.Length}
+    return fractional_coordinates(cell, coord)
+end
+
+function fractional_coordinates(sys::AbstractSystem, i)
+    return fractional_coordinates(cell(sys), position(sys, i))
+end
+
+"""
+    fractional_coordinates_as_matrix(sys, i)
+
+Return the fractional coordinates of atom(s) `i` in the system `sys` as a matrix.
+"""
+function fractional_coordinates_as_matrix(sys::AbstractSystem, i)
+    return fractional_coordinates_as_matrix(cell(sys), position(sys, i))
 end
 
 
-"""
-    position_as_matrix(sys, i)
+function fractional_coordinates_as_matrix(sys::AbstractSystem, i::Int)
+    return fractional_coordinates(cell(sys), position(sys, i))
+end
 
-Return the position of atom(s) `i` in the system `sys` as a matrix.
-""" 
-function position_as_matrix(sys::AbstractSystem, i)
-    tmp = position(sys, i)
-    ET = (eltype∘eltype)(tmp)
-    return reinterpret(reshape, ET, tmp)
+
+## Wrap coordinates
+
+wrap_coordinates!(::IsolatedCell{D}, r::SVector{D,T}) where{D,T} = r
+
+function wrap_coordinates!(::IsolatedCell{D}, coord::AbstractVector{SVector{D,T}}) where{D,T}
+    return coord
+end
+
+function wrap_coordinates!(cell::PeriodicCell{D}, coord::AbstractVector{SVector{D,T}}) where{D, T<:Unitful.Length}
+    @argcheck all( periodicity(cell) )
+    wrap(x) = x > 0 ? x-ceil(x)+1 : x-floor(x) # 0 <= x < 1
+    frc = fractional_coordinates_as_matrix(cell, coord)
+    pbc = periodicity(cell)
+    for i in axes(frc, 1)
+        if pbc[i]
+            tmp = @view frc[i,:]
+            tmp .= wrap.(tmp)
+        end
+    end
+    tmp = cell_matrix(cell) * frc
+    tmp = reinterpret(reshape, SVector{D,eltype(tmp)}, tmp) * unit(T)
+    coord .= tmp
+    return coord
+end
+
+function wrap_coordinates!(cell::PeriodicCell{D}, coord::SVector{D,T}) where{D,T<:Unitful.Length}
+    return wrap_coordinates!(cell, [coord])[1]
 end
 
 """
@@ -116,39 +158,15 @@ end
 Wrap the coordinates of the system to the unit cell.
 """
 function wrap_coordinates!(sys)
-    @argcheck all( periodicity(sys) )
-    wrap(x) = x > 0 ? x-ceil(x)+1 : x-floor(x) # 0 <= x < 1
-    rf = fractional_coordinates_as_matrix(sys, :)
-    rf .= wrap.(rf)
-    abc_matrix = cell_matrix(sys)
-    tmp = abc_matrix * rf
-    T = SVector{n_dimensions(sys), eltype(abc_matrix)}
-    new_r = reinterpret(reshape, T, tmp)
+    new_r = wrap_coordinates!(cell(sys), position(sys, :))
     AtomsBase.set_position!(sys, :, new_r)
     return sys
 end
 
 wrap_coordinates!(sys::AbstractIsolatedSystem) = sys
 
-function wrap_coordinates!(cell::PeriodicCell{D}, coord::AbstractVector{SVector{D,T}}) where{D, T<:Unitful.Length}
-    @argcheck all( periodicity(cell) )
-    wrap(x) = x > 0 ? x-ceil(x)+1 : x-floor(x) # 0 <= x < 1
-    frc = fractional_coordinates_as_matrix(cell, coord)
-    frc .= wrap.(frc)
-    abc_matrix = cell_matrix(cell)
-    tmp = abc_matrix * frc
-    return reinterpret(reshape, SVector{D,T}, tmp)
-end
 
-function wrap_coordinates!(cell::PeriodicCell{D}, coord::AbstractArray{SVector{D,T}}) where{D, T<:Unitful.Length}
-    s = size(coord)
-    rf = wrap_coordinates!(cell, vec(coord))
-    return Array( reshape(rf, s) )  # Clear type a bit
-end
-
-function wrap_coordinates!(cell::PeriodicCell{D}, coord::SVector{D,T}) where{D,T<:Unitful.Length}
-    return wrap_coordinates!(cell, [coord])[1]
-end
+## Translations
 
 
 function translate_system!(sys::AbstractSystem{D}, r::SVector{D, <:Unitful.Length}) where{D}
@@ -184,6 +202,9 @@ end
 
 Base.:+(r::AbstractVector{<:Unitful.Length}, sys::AbstractSystem{D}) where{D} = +(sys, r)
 Base.:-(sys::AbstractSystem{D}, r::SVector{D, <:Unitful.Length}) where{D} = +(sys, -r)
+
+
+## Rotations
 
 """
     rotate_system!(sys, r)
@@ -231,7 +252,16 @@ end
 function distance_vector(sys::AbstractSystem, i::Int, j::Int)
     r1 = fractional_coordinates(sys, i)
     r2 = fractional_coordinates(sys, j)
-    return distance_vector(cell(sys), r2 - r1)
+    return distance_vector( cell(sys), r2 - r1 )
+end
+
+function distance_vector(sys::AbstractSystem, i::Int, j)
+    r1 = position(sys, i)
+    rf1 = fractional_coordinates(cell(sys), r1)
+    Δr = map( fractional_coordinates(sys, j) ) do r
+        return r - rf1
+    end
+    return distance_vector(cell(sys), Δr)
 end
 
 distance_vector(::IsolatedCell{D}, r::SVector{D}) where{D} = r
@@ -257,6 +287,44 @@ function distance_vector(cell::PeriodicCell{D}, r::SVector{D}) where{D}
     return cell_matrix(cell) * Δr
 end
 
+function distance_vector(cell::PeriodicCell{D}, r::AbstractVector{SVector{D,T}}) where{D,T<:Unitful.Length}
+    tmp = fractional_coordinates(cell, r)
+    return distance_vector(cell, tmp)
+end
+
+function distance_vector(cell::PeriodicCell{D}, r::SVector{D,T}) where{D,T<:Unitful.Length}
+    tmp = fractional_coordinates(cell, r)
+    return distance_vector(cell, tmp)
+end
+
+function distance_vector(cell::PeriodicCell{D}, r::AbstractVector{SVector{D,T}}) where{D,T}
+    wrap(x) = x > 0 ? x-ceil(x)+1 : x-floor(x) # 0 <= x < 1
+    function dwrap(x) # distance wrap. x ∈ [-0.5, 0.5]
+        if x > 0.5
+            return x - 1
+        elseif x < -0.5
+            return x + 1
+        else
+            return x
+        end
+    end
+    tmp = reinterpret(reshape, T, r)
+    Δr = similar(tmp)
+    pbc = periodicity(cell)
+    for i in axes(tmp, 1)
+        if pbc[i]
+            r = @view tmp[i,:]
+            Δr[i,:] = dwrap.( wrap.(r) )
+        else
+            Δr[i,:] = tmp[i,:]
+        end
+    end
+    tmp = cell_matrix(cell) * Δr
+    return reinterpret(reshape, SVector{D,eltype(tmp)}, tmp)
+end
+
+distance_vector(::IsolatedCell, r::AbstractVector{SVector{D,T}}) where{D,T} = r
+
 
 """
     distance(sys, i, j)
@@ -268,11 +336,21 @@ function distance(sys::Union{AbstractSystem, AtomsVector}, i::Int, j::Int)
     return norm(r)
 end
 
+function distance(sys::Union{AbstractSystem, AtomsVector}, i::Int, j)
+    r = distance_vector(sys, i, j)
+    return norm.(r)
+end
+
 function distance(
     sys1::Union{AbstractIsolatedSystem, AtomsVector},
     sys2::Union{AbstractIsolatedSystem, AtomsVector}
 )
     return [ norm( position(sys2, j) - position(sys1,i) ) for i in 1:length(sys1), j in 1:length(sys2) ]
+end
+
+function distance(sys, i, j)
+    r = distance_vector(sys, i, j)
+    return norm.(r)
 end
 
 """
@@ -283,7 +361,7 @@ Calculate the angle between atoms `i`, `j`, and `k` in the system `sys`.
 The angle is defined as the angle between the vectors `r_ij` (from atom `j` to atom `i`)
 and `r_jk` (from atom `j` to atom `k`).
 
-See also `angled`.
+You can use `rad2deg` to convert the result to degrees.
 """
 function Base.angle(sys, i::Int, j::Int, k::Int)
     r1 = distance_vector(sys, j, i)
@@ -291,21 +369,7 @@ function Base.angle(sys, i::Int, j::Int, k::Int)
     return acos(dot(r1,r2)/sqrt(dot(r1,r1)*dot(r2,r2)))
 end
 
-"""
-    angled(sys, i, j, k)
 
-Calculate the angle between atoms `i`, `j`, and `k` in the system `sys`.
-
-The angle is defined as the angle between the vectors `r_ij` (from atom `j` to atom `i`)
-and `r_jk` (from atom `j` to `k`). The result is in degrees.
-
-See also `angle`.
-"""
-function angled(sys, i::Int, j::Int, k::Int)
-    r1 = distance_vector(sys, j, i)
-    r2 = distance_vector(sys, j, k)
-    return acosd(dot(r1,r2)/sqrt(dot(r1,r1)*dot(r2,r2)))
-end
 
 """
     dihedral_angle(sys, i, j, k, m)
@@ -315,7 +379,7 @@ Calculate the dihedral angle between atoms `i`, `j`, `k`, and `m` in the system 
 The dihedral angle is defined as the angle between the planes defined by the atoms `i`, `j`, `k`
 and `j`, `k`, `m`.
 
-See also `dihedral_angled`.
+You can use `rad2deg` to convert the result to degrees.
 """
 function dihedral_angle(sys, i::Int, j::Int, k::Int, m::Int)
     r1 = distance_vector(sys, i,j)
@@ -325,26 +389,7 @@ function dihedral_angle(sys, i::Int, j::Int, k::Int, m::Int)
     t2 = dot(cross(r1,r2), cross(r2,r3))
     return atan( dot(t1, r2./norm(r2)), t2 )
 end
-
-
-"""
-    dihedral_angled(sys, i, j, k, m)
-
-Calculate the dihedral angle between atoms `i`, `j`, `k`, and `m` in the system `sys`.
-
-The dihedral angle is defined as the angle between the planes defined by the atoms `i`, `j`, `k`
-and `j`, `k`, `m`. The result is in degrees.
-
-See also `dihedral_angle`.
-"""
-function dihedral_angled(sys, i::Int, j::Int, k::Int, m::Int)
-    r1 = distance_vector(sys, i,j)
-    r2 = distance_vector(sys, j,k)
-    r3 = distance_vector(sys, k,m)
-    t1 = cross(cross(r1,r2), cross(r2,r3))
-    t2 = dot(cross(r1,r2), cross(r2,r3))
-    return atand( dot(t1, r2./norm(r2)), t2 )
-end
+ 
 
 ##
 
