@@ -139,6 +139,9 @@ using Test
         @test all( velocity(trj, :, 2) .≈ velocity(sys2, :) )
         @test cell(trj, 1) == cell(sys)
         @test cell(trj, 2) == cell(sys2) 
+        @test all( distance(trj, 1, 2, 1:2) .≈ distance(trj, 1, 2, :) )
+        @test all( angle(trj, 1, 2, 3, 1:2) .≈ angle(trj, 1, 2, 3, :) )
+        @test all( dihedral_angle(trj, 1, 2, 3, 4, 1:2) .≈ dihedral_angle(trj, 1, 2, 3, 4, :) )
 
         @testset "SystemView" begin
             sv = SystemView(trj, 1)

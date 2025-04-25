@@ -362,12 +362,20 @@ function SimpleAtomsStructures.fractional_coordinates(traj::AbstractTrajectory, 
     SimpleAtomsStructures.fractional_coordinates(traj[frame], atom)
 end
 
-function SimpleAtomsStructures.distance_vector(traj::AbstractTrajectory, atom1::Int, atom2::Int, frame)
+function _distance_vector(traj::AbstractTrajectory, atom1::Int, atom2::Int, frame)
     r = position(traj, atom1, frame)
     r2 = position(traj, atom2, frame)
     tmp = r2 .- r 
     tmp = SimpleAtomsStructures.distance_vector(cell(traj), vec(tmp))
     return reshape(tmp, size(r)) 
+end
+
+function SimpleAtomsStructures.distance_vector(traj::AbstractTrajectory, atom1::Int, atom2::Int, ::Int)
+    _distance_vector(traj, atom1, atom2, 1)
+end
+
+function SimpleAtomsStructures.distance_vector(traj::AbstractTrajectory, atom1::Int, atom2::Int, frame)
+    _distance_vector(traj, atom1, atom2, frame)
 end
 
 function SimpleAtomsStructures.distance_vector(traj::AbstractTrajectory, atom1::Int, atom2::Int, ::Colon)
