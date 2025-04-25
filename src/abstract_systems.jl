@@ -3,7 +3,6 @@ abstract type AbstractCompositeSystem{D, LU} <: AtomsBase.AbstractSystem{D}    e
 abstract type AbstractIsolatedSystem{D, LU}  <: AbstractCompositeSystem{D, LU} end
 abstract type AbstractSimpleSystem{D, LU}    <: AbstractIsolatedSystem{D, LU}  end
 
-
 ## Defive some properties
 
 AtomsBase.atomkeys(sys::AbstractCompositeSystem) = AtomsBase.atomkeys(sys.base_system)

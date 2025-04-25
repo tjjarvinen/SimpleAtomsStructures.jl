@@ -8,6 +8,7 @@ using LinearAlgebra: cross, dot, norm, I
 using Rotations
 using StaticArrays
 using Unitful
+using Reexport
 
 export AtomicPropertySystem
 export CellSystem
@@ -15,6 +16,9 @@ export GenericSystem
 export SimpleAtom
 export SimpleSystem
 export SimpleVelocitySystem
+export SystemView
+export Trajectory
+export VelocityTrajectory
 
 # utilities
 export angled
@@ -45,5 +49,10 @@ include("atom_property_system.jl")
 include("cell_systems.jl")
 include("general_system.jl")
 include("utils.jl")
+
+#submodule
+include("trajectory/AtomsTrajectories.jl")
+
+@reexport using .AtomsTrajectories
 
 end
