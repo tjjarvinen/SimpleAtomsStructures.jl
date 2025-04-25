@@ -4,20 +4,9 @@
 # so it might need an update
 struct SimpleAtom{D, TD, TP}
     data::TD
-    function SimpleAtom(
-        spc::ChemicalSpecies, 
-        r::AbstractVector{<:Unitful.Length}; 
-        kwargs...
-    )   
-        if haskey(kwargs, :velocity) && length(kwargs[:velocity]) != length(r)
-            throw( ArgumentError("Position and velocity have different dimensions") )
-        end
-        tmp = ( species=spc, position=SVector(r...), kwargs... )
-        new{length(r), typeof(tmp), eltype(r)}(tmp)
-    end
     function SimpleAtom(data::NamedTuple)
-        @argcheck haskey(data, :species)
-        @argcheck haskey(data, :position)
+        @argcheck haskey(data, :species) && isa(data.species, ChemicalSpecies)
+        @argcheck haskey(data, :position) && eltype(data.position) <: Unitful.Length
         @argcheck ! ( haskey(data, :velocity) && length(data.velocity) != length(data.position) )
         new{length(data.position), typeof(data), eltype(data.position)}(data)
     end
@@ -34,6 +23,23 @@ struct SimpleAtom{D, TD, TP}
         tmp = ( species=spc, position=r, velocity=v, kwargs... )
         new{D, typeof(tmp), TP}(tmp)
     end
+end
+
+function SimpleAtom(
+    spc::ChemicalSpecies, 
+    r::AbstractVector{<:Unitful.Length}; 
+    kwargs...
+)   
+    if haskey(kwargs, :velocity)
+        if length(kwargs[:velocity]) != length(r) && !isa(v, SVector)
+            throw( ArgumentError("Position and velocity have same length") )
+        end
+        v = SVector( kwargs[:velocity]... )
+        filter!(x->x!=:velocity, keys(kwargs))
+        tmp = ( species=spc, position=SVector(r...), velocity=v, kwargs... )
+    end
+    tmp = ( species=spc, position=SVector(r...), kwargs... )
+    return SimpleAtom(tmp)
 end
 
 function SimpleAtom(at::Union{AtomsBase.Atom, AtomsBase.AtomView})
