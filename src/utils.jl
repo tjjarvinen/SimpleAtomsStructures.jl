@@ -395,6 +395,7 @@ end
 
 # make this with generating function for more dimensions
 function Base.repeat(sys::CellSystem{3}, n::NTuple{3,<:Integer}) # where{D}
+    @argcheck all( n .> 0 )
     abc = cell_vectors(sys)
     abc_n = n .* abc
     cell = PeriodicCell(abc_n, periodicity(sys))
