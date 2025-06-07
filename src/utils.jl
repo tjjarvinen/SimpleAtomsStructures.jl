@@ -70,9 +70,11 @@ end
 ## Fractional coordinates
 
 """
+    fractional_coordinates(sys, r)
     fractional_coordinates(cell, r)
 
 Return the fractional coordinates of the position `r` in the cell `cell`.
+If AtomsBase.AbstractSystem `sys` is given, the cell is taken from it.
 """
 function fractional_coordinates(
     cell::Union{PeriodicCell{D}, IsolatedCell{D}},
@@ -82,11 +84,7 @@ function fractional_coordinates(
     return SVector(  (abc_inv * r)... )
 end
 
-"""
-    fractional_coordinates(cell, coord)
-Return the fractional coordinates of the positions `coord` in the cell `cell`.
-The `coord` should be an array of `SVector{D,T}` where `T` is a `Unitful.Length`.
-"""
+
 function fractional_coordinates(
     cell::Union{PeriodicCell{D}, IsolatedCell{D}},
     coord::AbstractArray{SVector{D,T}}
@@ -97,6 +95,11 @@ function fractional_coordinates(
     return Array( reshape(tmp, s) ) # Clear type a bit
 end
 
+"""
+    fractional_coordinates_as_matrix(cell, coord)
+
+Same as `fractional_coordinates`, but returns the fractional coordinates as a matrix.
+"""
 function fractional_coordinates_as_matrix(
     cell::Union{PeriodicCell{D}, IsolatedCell{D}},
     coord::AbstractVector{SVector{D,T}}
@@ -163,8 +166,13 @@ end
 
 """
     wrap_coordinates!(sys)
+    wrap_coordinates!(cell, coord)
 
-Wrap the coordinates of the system to the unit cell.
+Wrap the coordinates to given cell.
+
+If `sys` is given, the cell is taken from it. 
+
+If `cell` is given, the new coordinates are returned.
 """
 function wrap_coordinates!(sys)
     new_r = wrap_coordinates!(cell(sys), position(sys, :))
