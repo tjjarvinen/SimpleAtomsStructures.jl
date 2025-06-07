@@ -33,19 +33,19 @@ function SimpleAtomsStructures.dihedral_angle(traj::AbstractVector{<:AbstractSys
 end
 
 
-function Base.angle(traj::AbstractVector{<:AbstractSystem}, i::Int, j::Int, k::Int, frame::Int)
-    return SimpleAtomsStructures.angle(traj[frame], i, j, k)
+function SimpleAtomsStructures.bond_angle(traj::AbstractVector{<:AbstractSystem}, i::Int, j::Int, k::Int, frame::Int)
+    return SimpleAtomsStructures.bond_angle(traj[frame], i, j, k)
 end
 
-function Base.angle(traj::AbstractVector{<:AbstractSystem}, i::Int, j::Int, k::Int, ::Colon)
+function SimpleAtomsStructures.bond_angle(traj::AbstractVector{<:AbstractSystem}, i::Int, j::Int, k::Int, ::Colon)
     map(traj) do sys
-        SimpleAtomsStructures.angle(sys, i, j, k)
+        SimpleAtomsStructures.bond_angle(sys, i, j, k)
     end     
 end
 
-function Base.angle(traj::AbstractVector{<:AbstractSystem}, i::Int, j::Int, k::Int, frames)
+function SimpleAtomsStructures.bond_angle(traj::AbstractVector{<:AbstractSystem}, i::Int, j::Int, k::Int, frames)
     map( frames ) do frame
-        SimpleAtomsStructures.angle(traj[frame], i, j, k)
+        SimpleAtomsStructures.bond_angle(traj[frame], i, j, k)
     end       
 end
 

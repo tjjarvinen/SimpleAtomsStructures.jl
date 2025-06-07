@@ -114,11 +114,16 @@ end
 ##
 
 function _get_atom(traj::SimpleTrajectory, i::Int, frame::Int)
-    #tmp = NamedTuple( k=>v[i] for (k,v) in pairs(traj.constants.atom_constants)  )
-    #return SimpleAtom(species(traj, i, frame), position(traj, i, frame); tmp...)
-    return SimpleAtom(species(traj, i, frame), position(traj, i, frame))
+    return SimpleAtomsStructures.SimpleAtom(species(traj, i, frame), position(traj, i, frame))
 end
 
+function _get_atom(traj::VelocityTrajectory, i::Int, frame::Int)
+    return SimpleAtomsStructures.SimpleAtom(
+        species(traj, i, frame), 
+        position(traj, i, frame), 
+        velocity(traj, i, frame)
+    )
+end
 
 
 function Base.length(trj::AbstractTrajectory)

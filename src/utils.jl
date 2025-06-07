@@ -69,7 +69,13 @@ end
 
 ## Fractional coordinates
 
+"""
+    fractional_coordinates(sys, r)
+    fractional_coordinates(cell, r)
 
+Return the fractional coordinates of the position `r` in the cell `cell`.
+If AtomsBase.AbstractSystem `sys` is given, the cell is taken from it.
+"""
 function fractional_coordinates(
     cell::Union{PeriodicCell{D}, IsolatedCell{D}},
     r::SVector{D,T}
@@ -77,6 +83,7 @@ function fractional_coordinates(
     abc_inv = inv_cell(cell)
     return SVector(  (abc_inv * r)... )
 end
+
 
 function fractional_coordinates(
     cell::Union{PeriodicCell{D}, IsolatedCell{D}},
@@ -88,6 +95,11 @@ function fractional_coordinates(
     return Array( reshape(tmp, s) ) # Clear type a bit
 end
 
+"""
+    fractional_coordinates_as_matrix(cell, coord)
+
+Same as `fractional_coordinates`, but returns the fractional coordinates as a matrix.
+"""
 function fractional_coordinates_as_matrix(
     cell::Union{PeriodicCell{D}, IsolatedCell{D}},
     coord::AbstractVector{SVector{D,T}}
@@ -154,8 +166,13 @@ end
 
 """
     wrap_coordinates!(sys)
+    wrap_coordinates!(cell, coord)
 
-Wrap the coordinates of the system to the unit cell.
+Wrap the coordinates to given cell.
+
+If `sys` is given, the cell is taken from it. 
+
+If `cell` is given, the new coordinates are returned.
 """
 function wrap_coordinates!(sys)
     new_r = wrap_coordinates!(cell(sys), position(sys, :))
@@ -190,18 +207,16 @@ function translate_system!(sys::AbstractSystem{D}, r::AbstractVector{<:Unitful.L
     return sys
 end
 
-function Base.:+(sys::AbstractSystem{D}, r::SVector{D, <:Unitful.Length}) where{D}
+"""
+    translate_system(sys, r)
+
+Copy system `sys` and translate it by the vector `r`.
+Orignal system is not modified.
+"""
+function translate_system(sys::AbstractSystem{D}, r::SVector{D, <:Unitful.Length}) where{D}
     tmp = deepcopy(sys)
     return translate_system!(tmp, r)
 end
-
-function Base.:+(sys::AbstractSystem{D}, r::AbstractVector{<:Unitful.Length}) where{D}
-    @argcheck length(r) == D
-    return +(sys, SVector(r...))
-end
-
-Base.:+(r::AbstractVector{<:Unitful.Length}, sys::AbstractSystem{D}) where{D} = +(sys, r)
-Base.:-(sys::AbstractSystem{D}, r::SVector{D, <:Unitful.Length}) where{D} = +(sys, -r)
 
 
 ## Rotations
@@ -225,12 +240,16 @@ function rotate_system!(sys::GeneralSystem, r::Rotation)
     return sys
 end
 
-function Base.:*(sys::AbstractSystem, r::Rotation)
+"""
+    rotate_system(sys, r)
+
+Copy system `sys` and rotate it by the rotation `r`.
+Orignal system is not modified.
+"""
+function rotate_system(sys::AbstractSystem, r::Rotation)
     tmp = deepcopy(sys)
     return rotate_system!(tmp, r)
 end
-
-Base.:*(r::Rotation, sys::AbstractSystem) = *(sys, r)
 
 
 ## 
@@ -354,7 +373,7 @@ function distance(sys, i, j)
 end
 
 """
-    angle(sys, i, j, k)
+    bond_angle(sys, i, j, k)
 
 Calculate the angle between atoms `i`, `j`, and `k` in the system `sys`.
 
@@ -363,7 +382,7 @@ and `r_jk` (from atom `j` to atom `k`).
 
 You can use `rad2deg` to convert the result to degrees.
 """
-function Base.angle(sys, i::Int, j::Int, k::Int)
+function bond_angle(sys, i::Int, j::Int, k::Int)
     r1 = distance_vector(sys, j, i)
     r2 = distance_vector(sys, j, k)
     return acos(dot(r1,r2)/sqrt(dot(r1,r1)*dot(r2,r2)))
@@ -393,8 +412,16 @@ end
 
 ##
 
-# make this with generating function for more dimensions
-function Base.repeat(sys::CellSystem{3}, n::NTuple{3,<:Integer}) # where{D}
+"""
+    repeat(sys, n)
+
+Repeat the system `sys` in all three dimensions by the factors `n`
+and return the new system.
+Original system is not modified.
+"""
+function Base.repeat(sys::CellSystem{3}, n::NTuple{3,<:Integer})
+    #TODO make this suppor more diminsions with generating function
+    @argcheck all( n .> 0 )
     abc = cell_vectors(sys)
     abc_n = n .* abc
     cell = PeriodicCell(abc_n, periodicity(sys))
@@ -403,7 +430,7 @@ function Base.repeat(sys::CellSystem{3}, n::NTuple{3,<:Integer}) # where{D}
     for i in 0:n[1]-1, j in 0:n[2]-1, k in 0:n[3]-1
         if ! ( 0 == i == j == k )
             r = sum( [i,j,k] .* abc )
-            tmp = tsys + r
+            tmp = translate_system(tsys, r)
             append!(nsys, tmp)
         end
     end
@@ -411,8 +438,3 @@ function Base.repeat(sys::CellSystem{3}, n::NTuple{3,<:Integer}) # where{D}
 end
 
 Base.repeat(sys::CellSystem{3}, n::Integer) = Base.repeat(sys, (n,n,n))
-
-Base.:*(sys::CellSystem{3}, n::Integer) = Base.repeat(sys, n)
-Base.:*(sys::CellSystem{3}, n::NTuple{3,<:Integer}) = Base.repeat(sys, n)
-Base.:*(n::Integer, sys::CellSystem{3}) = Base.repeat(sys, n)
-Base.:*(n::NTuple{3,<:Integer}, sys::CellSystem{3}) = Base.repeat(sys, n)
