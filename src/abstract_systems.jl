@@ -16,7 +16,7 @@ AtomsBase.set_position!(sys::AbstractCompositeSystem, i, x) = AtomsBase.set_posi
 
 Base.length(sys::AbstractCompositeSystem) = length(sys.base_system)
 
-function Base.:+(sys1::T, sys2::T) where{T<:AbstractIsolatedSystem}
+function add_systems(sys1::T, sys2::T) where{T<:AbstractIsolatedSystem}
     tmp = deepcopy(sys1)
     append!(tmp, sys2)
     return tmp

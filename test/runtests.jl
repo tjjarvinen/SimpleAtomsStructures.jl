@@ -83,7 +83,7 @@ using Test
         sys = SimpleSystem(ref.system)
         # rotation tests
         q = rand(QuatRotation)
-        sys2 = sys * q
+        sys2 = rotate_system(sys, q)
         @test all( i-> position(sys2, i) ≈ q * position(sys, i), 1:length(sys) )
         @test angle(sys, 1, 2, 3) ≈ angle(sys2, 1, 2, 3)
         @test dihedral_angle(sys, 1,2,3,4) ≈ dihedral_angle(sys2, 1,2,3,4)
@@ -91,14 +91,15 @@ using Test
 
         # translation tests
         cms = center_of_mass(sys)
-        sys2 = sys - cms
+        sys2 = translate_system(sys, -cms)
         @test all( i-> position(sys2, i) ≈ position(sys, i) - cms, 1:length(sys) )
         @test angle(sys, 1, 2, 3) ≈ angle(sys2, 1, 2, 3)
         @test dihedral_angle(sys, 1,2,3,4) ≈ dihedral_angle(sys2, 1,2,3,4)
         @test distance_vector(sys2, 1, 2) ≈ distance_vector(sys, 1, 2)
 
         
-        sys3 = sys + sys2
+        sys3 = add_systems(sys, sys2)
+        @test isa(sys3, typeof(sys))
         @test length(sys3) == length(sys) + length(sys2)
         
         # now with cell
@@ -115,6 +116,17 @@ using Test
         @test all( x -> all(x[1] .≈ x[2]), zip(clv, eachcol(clm)) )
         icell = inv_cell(sys)
         tmp = icell * clm
+
+        # Repeat system
+        csys = CellSystem(ref.system)
+        sys123 = repeat(csys, (1, 2, 3))
+        @test length(sys123) == 6 * length(csys)
+        @test all( species( sys123, :) .=== repeat( species(csys,:), 6) )
+        c1 = cell_vectors(csys)
+        c2 = cell_vectors(sys123)
+        @test c1[1] ≈   c1[1]
+        @test c2[2] ≈ 2*c1[2]
+        @test c2[3] ≈ 3*c1[3]      
     end
     @testset "SimpleAtom" begin
         sys = GenericSystem(ref.system)

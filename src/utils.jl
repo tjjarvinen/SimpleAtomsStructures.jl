@@ -69,7 +69,11 @@ end
 
 ## Fractional coordinates
 
+"""
+    fractional_coordinates(cell, r)
 
+Return the fractional coordinates of the position `r` in the cell `cell`.
+"""
 function fractional_coordinates(
     cell::Union{PeriodicCell{D}, IsolatedCell{D}},
     r::SVector{D,T}
@@ -78,6 +82,11 @@ function fractional_coordinates(
     return SVector(  (abc_inv * r)... )
 end
 
+"""
+    fractional_coordinates(cell, coord)
+Return the fractional coordinates of the positions `coord` in the cell `cell`.
+The `coord` should be an array of `SVector{D,T}` where `T` is a `Unitful.Length`.
+"""
 function fractional_coordinates(
     cell::Union{PeriodicCell{D}, IsolatedCell{D}},
     coord::AbstractArray{SVector{D,T}}
@@ -190,18 +199,16 @@ function translate_system!(sys::AbstractSystem{D}, r::AbstractVector{<:Unitful.L
     return sys
 end
 
-function Base.:+(sys::AbstractSystem{D}, r::SVector{D, <:Unitful.Length}) where{D}
+"""
+    translate_system(sys, r)
+
+Copy system `sys` and translate it by the vector `r`.
+Orignal system is not modified.
+"""
+function translate_system(sys::AbstractSystem{D}, r::SVector{D, <:Unitful.Length}) where{D}
     tmp = deepcopy(sys)
     return translate_system!(tmp, r)
 end
-
-function Base.:+(sys::AbstractSystem{D}, r::AbstractVector{<:Unitful.Length}) where{D}
-    @argcheck length(r) == D
-    return +(sys, SVector(r...))
-end
-
-Base.:+(r::AbstractVector{<:Unitful.Length}, sys::AbstractSystem{D}) where{D} = +(sys, r)
-Base.:-(sys::AbstractSystem{D}, r::SVector{D, <:Unitful.Length}) where{D} = +(sys, -r)
 
 
 ## Rotations
@@ -225,12 +232,16 @@ function rotate_system!(sys::GeneralSystem, r::Rotation)
     return sys
 end
 
-function Base.:*(sys::AbstractSystem, r::Rotation)
+"""
+    rotate_system(sys, r)
+
+Copy system `sys` and rotate it by the rotation `r`.
+Orignal system is not modified.
+"""
+function rotate_system(sys::AbstractSystem, r::Rotation)
     tmp = deepcopy(sys)
     return rotate_system!(tmp, r)
 end
-
-Base.:*(r::Rotation, sys::AbstractSystem) = *(sys, r)
 
 
 ## 
@@ -393,8 +404,15 @@ end
 
 ##
 
-# make this with generating function for more dimensions
-function Base.repeat(sys::CellSystem{3}, n::NTuple{3,<:Integer}) # where{D}
+"""
+    repeat(sys, n)
+
+Repeat the system `sys` in all three dimensions by the factors `n`
+and return the new system.
+Original system is not modified.
+"""
+function Base.repeat(sys::CellSystem{3}, n::NTuple{3,<:Integer})
+    #TODO make this suppor more diminsions with generating function
     @argcheck all( n .> 0 )
     abc = cell_vectors(sys)
     abc_n = n .* abc
@@ -404,7 +422,7 @@ function Base.repeat(sys::CellSystem{3}, n::NTuple{3,<:Integer}) # where{D}
     for i in 0:n[1]-1, j in 0:n[2]-1, k in 0:n[3]-1
         if ! ( 0 == i == j == k )
             r = sum( [i,j,k] .* abc )
-            tmp = tsys + r
+            tmp = translate_system(tsys, r)
             append!(nsys, tmp)
         end
     end
@@ -412,8 +430,3 @@ function Base.repeat(sys::CellSystem{3}, n::NTuple{3,<:Integer}) # where{D}
 end
 
 Base.repeat(sys::CellSystem{3}, n::Integer) = Base.repeat(sys, (n,n,n))
-
-Base.:*(sys::CellSystem{3}, n::Integer) = Base.repeat(sys, n)
-Base.:*(sys::CellSystem{3}, n::NTuple{3,<:Integer}) = Base.repeat(sys, n)
-Base.:*(n::Integer, sys::CellSystem{3}) = Base.repeat(sys, n)
-Base.:*(n::NTuple{3,<:Integer}, sys::CellSystem{3}) = Base.repeat(sys, n)
