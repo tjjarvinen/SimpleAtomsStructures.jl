@@ -16,7 +16,7 @@ function SimpleSystem(species::ChemicalSpecies, pos::AbstractVector{<:Unitful.Le
     return SimpleSystem([species], [pos])
 end
 
-SimpleSystem(sys::SimpleSystem) = sys
+SimpleSystem(sys::SimpleSystem) = deepcopy(sys)
 
 function SimpleSystem(ss::Union{AbstractSystem,AtomsVector}, i)
     return SimpleSystem(species(ss, i), position(ss, i))
@@ -100,6 +100,7 @@ function SimpleVelocitySystem(sys::Union{AbstractSystem, AtomsVector}, i)
 end
 
 SimpleVelocitySystem(sys::Union{AbstractSystem, AtomsVector}) = SimpleVelocitySystem(sys, :)
+SimpleVelocitySystem(sys::SimpleVelocitySystem) = deepcopy(sys)
 
 function SimpleVelocitySystem(
     species::ChemicalSpecies, 

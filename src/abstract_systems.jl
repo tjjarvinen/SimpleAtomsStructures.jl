@@ -3,6 +3,8 @@ abstract type AbstractCompositeSystem{D, LU} <: AtomsBase.AbstractSystem{D}    e
 abstract type AbstractIsolatedSystem{D, LU}  <: AbstractCompositeSystem{D, LU} end
 abstract type AbstractSimpleSystem{D, LU}    <: AbstractIsolatedSystem{D, LU}  end
 
+abstract type AbstractSubSystemView{D, LU} <: AbstractCompositeSystem{D, LU} end
+
 ## Defive some properties
 
 AtomsBase.atomkeys(sys::AbstractCompositeSystem) = AtomsBase.atomkeys(sys.base_system)
@@ -15,6 +17,11 @@ AtomsBase.velocity(sys::AbstractCompositeSystem, i) =  AtomsBase.velocity(sys.ba
 AtomsBase.set_position!(sys::AbstractCompositeSystem, i, x) = AtomsBase.set_position!(sys.base_system, i, x)
 
 Base.length(sys::AbstractCompositeSystem) = length(sys.base_system)
+Base.keys(::AbstractCompositeSystem) = (:cell_vectors, :periodicity)
+
+Base.getindex(sys::AbstractCompositeSystem, i::Int) = sys.base_system[i]
+Base.getindex(sys::AbstractCompositeSystem, c::Colon) = sys.base_system[c]
+
 
 """
     add_systems(sys1::T, sys2::T) where {T<:AbstractIsolatedSystem}
@@ -49,6 +56,7 @@ end
 
 function AtomsBase.set_position!(sys::AbstractSimpleSystem{D}, ::Colon, x::AbstractMatrix{<:Unitful.Length}) where{D}
     @argcheck size(x, 2) == length(sys)
+    @argcheck size(x, 1) == D
     tmp = reinterpret(reshape, SVector{D, eltype(x)}, x)
     AtomsBase.set_position!(sys, :, tmp)
     return sys
