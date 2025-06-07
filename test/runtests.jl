@@ -5,6 +5,9 @@ using Rotations
 using Unitful
 using Test
 
+
+include("Aqua.jl")
+
 @testset "SimpleAtomsStructures.jl" begin
     # Write your tests here.
     ref = make_test_system()
@@ -85,7 +88,7 @@ using Test
         q = rand(QuatRotation)
         sys2 = rotate_system(sys, q)
         @test all( i-> position(sys2, i) ≈ q * position(sys, i), 1:length(sys) )
-        @test angle(sys, 1, 2, 3) ≈ angle(sys2, 1, 2, 3)
+        @test bond_angle(sys, 1, 2, 3) ≈ bond_angle(sys2, 1, 2, 3)
         @test dihedral_angle(sys, 1,2,3,4) ≈ dihedral_angle(sys2, 1,2,3,4)
         @test distance_vector(sys2, 1, 2) ≈ q * distance_vector(sys, 1, 2)
 
@@ -93,7 +96,7 @@ using Test
         cms = center_of_mass(sys)
         sys2 = translate_system(sys, -cms)
         @test all( i-> position(sys2, i) ≈ position(sys, i) - cms, 1:length(sys) )
-        @test angle(sys, 1, 2, 3) ≈ angle(sys2, 1, 2, 3)
+        @test bond_angle(sys, 1, 2, 3) ≈ bond_angle(sys2, 1, 2, 3)
         @test dihedral_angle(sys, 1,2,3,4) ≈ dihedral_angle(sys2, 1,2,3,4)
         @test distance_vector(sys2, 1, 2) ≈ distance_vector(sys, 1, 2)
 
@@ -152,7 +155,7 @@ using Test
         @test cell(trj, 1) == cell(sys)
         @test cell(trj, 2) == cell(sys2) 
         @test all( distance(trj, 1, 2, 1:2) .≈ distance(trj, 1, 2, :) )
-        @test all( angle(trj, 1, 2, 3, 1:2) .≈ angle(trj, 1, 2, 3, :) )
+        @test all( bond_angle(trj, 1, 2, 3, 1:2) .≈ bond_angle(trj, 1, 2, 3, :) )
         @test all( dihedral_angle(trj, 1, 2, 3, 4, 1:2) .≈ dihedral_angle(trj, 1, 2, 3, 4, :) )
 
         @testset "SystemView" begin

@@ -365,7 +365,7 @@ function distance(sys, i, j)
 end
 
 """
-    angle(sys, i, j, k)
+    bond_angle(sys, i, j, k)
 
 Calculate the angle between atoms `i`, `j`, and `k` in the system `sys`.
 
@@ -374,7 +374,7 @@ and `r_jk` (from atom `j` to atom `k`).
 
 You can use `rad2deg` to convert the result to degrees.
 """
-function Base.angle(sys, i::Int, j::Int, k::Int)
+function bond_angle(sys, i::Int, j::Int, k::Int)
     r1 = distance_vector(sys, j, i)
     r2 = distance_vector(sys, j, k)
     return acos(dot(r1,r2)/sqrt(dot(r1,r1)*dot(r2,r2)))

@@ -86,7 +86,6 @@ Base.pairs(sa::SimpleAtom)               = pairs(sa.data)
 Base.show(io::IO, sa::SimpleAtom) = AtomsBase.show_atom(io, sa)
 Base.show(io::IO, mime::MIME"text/plain", sa::SimpleAtom) = AtomsBase.show_atom(io, mime, sa)
 
-Base.convert(SimpleAtom, at::Union{AtomsBase.Atom, AtomsBase.AtomView}) = SimpleAtom(at)
 
 ## Vector properties
 

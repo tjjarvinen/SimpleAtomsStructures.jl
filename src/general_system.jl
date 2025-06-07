@@ -3,9 +3,9 @@ mutable struct GeneralSystem{D, LU, TB} <: AbstractCompositeSystem{D, LU}
     base_system::TB
     properties::Dict{Symbol, Any}
     function GeneralSystem(
-        sys::Union{CellSystem{D,LU,TT,TC}, AbstractIsolatedSystem{D,LU}};
+        sys::Union{CellSystem{D,LU}, AbstractIsolatedSystem{D,LU}};
         kwargs...
-    ) where {D,LU,TT,TC}
+    ) where {D,LU}
         props = Dict{Symbol, Any}( k=>v for (k,v) in pairs(kwargs) if ! in(k, (:cell, :cell_vectors, :periodicity)) )
         new{D, LU, typeof(sys)}(sys, props)
     end

@@ -13,26 +13,29 @@ mutable struct AtomicPropertySystem{D, LU, TB, TP, SM} <: AbstractIsolatedSystem
     end
 end
 
-function AtomicPropertySystem(sys::AbstractSystem, properties::NamedTuple)
-    # ignore atom_properties on sys and use properties as atom_properties
-    # also ignore global system properties
-    @argcheck all(x->length(x)==length(sys), properties)
-    prop_names = Tuple( x  for x in keys(properties) if !(x in (:species, :position, :velocity)) )
-    el_types = Tuple( eltype(properties[key]) for key in prop_names )
-    TP = NamedTuple{ prop_names, Tuple{el_types...} }
-    prop = Vector{TP}(undef, length(sys))
-    for i in 1:length(sys)
-        prop[i] = NamedTuple( key =>  properties[key][i] for key in prop_names )
-    end
-    return AtomicPropertySystem(sys, prop)
-end
+# function AtomicPropertySystem(sys::AbstractSystem, properties::NamedTuple)
+#     # ignore atom_properties on sys and use properties as atom_properties
+#     # also ignore global system properties
+#     @argcheck all(x->length(x)==length(sys), properties)
+#     prop_names = Tuple( x  for x in keys(properties) if !(x in (:species, :position, :velocity)) )
+#     el_types = Tuple( eltype(properties[key]) for key in prop_names )
+#     TP = NamedTuple{ prop_names, Tuple{el_types...} }
+#     prop = Vector{TP}(undef, length(sys))
+#     for i in 1:length(sys)
+#         prop[i] = NamedTuple( key =>  properties[key][i] for key in prop_names )
+#     end
+#     return AtomicPropertySystem(sys, prop)
+# end
 
 
-AtomicPropertySystem(sys::AtomicPropertySystem) = sys
-function AtomicPropertySystem(sys::AtomicPropertySystem, i)
+AtomicPropertySystem(sys::AtomicPropertySystem) = deepcopy(sys)
+function _AtomicPropertySystem(sys::AtomicPropertySystem, i)
     tmp = SimpleVelocitySystem(sys.base_system, i)
     return AtomicPropertySystem( tmp, sys.atom_properties[i] )
 end
+AtomicPropertySystem(sys::AtomicPropertySystem, i) = _AtomicPropertySystem( AtomicPropertySystem(sys), i )
+AtomicPropertySystem(sys::AtomicPropertySystem, i::Colon) = _AtomicPropertySystem( AtomicPropertySystem(sys), i)
+AtomicPropertySystem(sys::AtomicPropertySystem, i::BitVector) = _AtomicPropertySystem( AtomicPropertySystem(sys), i)
 
 function AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}, i)
     prop_names = [ k for k in atomkeys(sys) if ! in(k, (:species, :position, :velocity)) ]
@@ -47,9 +50,10 @@ end
 
 AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}, ::Colon) = AtomicPropertySystem(sys, 1:length(sys))
 AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector})          = AtomicPropertySystem(sys, :)
-AtomicPropertySystem(sys::AbstractSimpleSystem, ::Colon) = SimpleVelocitySystem(sys, :)
-AtomicPropertySystem(sys::AbstractSimpleSystem, i)       = SimpleVelocitySystem(sys, i)
-AtomicPropertySystem(sys::AbstractSimpleSystem)          = SimpleVelocitySystem(sys)
+AtomicPropertySystem(sys::AbstractSimpleSystem, ::Colon)               = SimpleVelocitySystem(sys, :)
+AtomicPropertySystem(sys::AbstractSimpleSystem, i)                     = SimpleVelocitySystem(sys, i)
+AtomicPropertySystem(sys::AbstractSimpleSystem, i::BitVector)          = SimpleVelocitySystem(sys, i)
+AtomicPropertySystem(sys::AbstractSimpleSystem)                        = SimpleVelocitySystem(sys)
 
 function AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}, i::BitVector)
     @argcheck length(sys) == length(i)
@@ -57,10 +61,10 @@ function AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}, i::BitVec
     return AtomicPropertySystem(sys, j)
 end
 
-function AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}, spc::ChemicalSpecies)
-    i = species(sys, :) .== spc
-    return AtomicPropertySystem(sys, i)
-end
+# function AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}, spc::ChemicalSpecies)
+#     i = species(sys, :) .== spc
+#     return AtomicPropertySystem(sys, i)
+# end
 
 
 function Base.getindex(sys::AtomicPropertySystem, i::Int)

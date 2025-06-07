@@ -17,16 +17,14 @@ export SimpleAtom
 export SimpleSystem
 export SimpleVelocitySystem
 export SystemView
-export Trajectory
 export VelocityTrajectory
 
 # utilities
 export add_systems
-export angled
+export bond_angle
 export cell_matrix
 export center_of_mass
 export dihedral_angle
-export dihedral_angled
 export distance
 export distance_vector
 export fractional_coordinates
