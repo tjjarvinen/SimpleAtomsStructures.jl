@@ -10,6 +10,14 @@ mutable struct SimpleSystemView{D, LU, TP, TI} <: AbstractSimpleSystem{D, LU}
         TP = (eltype ∘ eltype)(vpos) 
         new{D, LU, TP, TI}(vspc, vpos)
     end
+    function SimpleSystemView(
+            spc::SubArray{ChemicalSpecies, 1, Vector{ChemicalSpecies}, TI, true},
+            pos::SubArray{SVector{D,TP}, 1, Vector{SVector{D,TP}}, TI, true}
+        ) where {D, TP, TI}
+        @argcheck length(spc) == length(pos)
+        LU = (unit ∘ eltype ∘ eltype)(pos)
+        new{D, LU, TP, TI}(spc, pos)
+    end
 end
 
 
@@ -26,6 +34,15 @@ mutable struct SimpleVelocitySystemView{D, LU, TP, TV, TI} <: AbstractSimpleSyst
         TP = (eltype ∘ eltype)(vpos)
         TV = (eltype ∘ eltype)(vvel)    
         new{D, LU, TP, TV, TI}(vspc, vpos, vvel)
+    end
+    function SimpleVelocitySystemView(
+            spc::SubArray{ChemicalSpecies, 1, Vector{ChemicalSpecies}, TI, true},
+            pos::SubArray{SVector{D,TP}, 1, Vector{SVector{D,TP}}, TI, true},
+            vel::SubArray{SVector{D,TV}, 1, Vector{SVector{D,TV}}, TI, true}
+        ) where {D, TP, TV, TI}
+        @argcheck length(spc) == length(pos) == length(vel)
+        LU = (unit ∘ eltype ∘ eltype)(pos)
+        new{D, LU, TP, TV, TI}(spc, pos, vel) 
     end
 end
 
@@ -47,6 +64,12 @@ mutable struct CellSystemView{D, LU, TB, TC} <: AbstractCompositeSystem{D, LU}
     function CellSystemView(sys::CellSystem{D, LU, TT, TC}, i) where {D, LU, TT, TC}
         base = system_view(sys.base_system, i)
         new{D, LU, typeof(base), TC}(base, sys.cell)
+    end
+    function CellSystemView(
+        ssys::Union{SimpleSystemView{D, LU}, SimpleVelocitySystemView{D, LU}, AtomicPropertySystemView{D, LU}},
+        cell::PeriodicCell{D}
+    ) where {D, LU}
+        new{D, LU, typeof(ssys), typeof(cell)}(ssys, cell)
     end
 end
 

@@ -20,7 +20,7 @@ Base.length(sys::AbstractCompositeSystem) = length(sys.base_system)
 Base.keys(::AbstractCompositeSystem) = (:cell_vectors, :periodicity)
 
 Base.getindex(sys::AbstractCompositeSystem, i::Int) = sys.base_system[i]
-Base.getindex(sys::AbstractCompositeSystem, c::Colon) = sys.base_system[c]
+Base.getindex(sys::AbstractCompositeSystem, ::Colon) = map(i->sys[i], 1:length(sys))
 
 
 """
