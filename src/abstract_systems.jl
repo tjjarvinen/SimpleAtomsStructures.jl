@@ -3,6 +3,7 @@ abstract type AbstractCompositeSystem{D, LU} <: AtomsBase.AbstractSystem{D}    e
 abstract type AbstractIsolatedSystem{D, LU}  <: AbstractCompositeSystem{D, LU} end
 abstract type AbstractSimpleSystem{D, LU}    <: AbstractIsolatedSystem{D, LU}  end
 
+
 ## Defive some properties
 
 AtomsBase.atomkeys(sys::AbstractCompositeSystem) = AtomsBase.atomkeys(sys.base_system)
@@ -12,9 +13,13 @@ AtomsBase.position(sys::AbstractCompositeSystem, i) =  position(sys.base_system,
 AtomsBase.species(sys::AbstractCompositeSystem, i) = AtomsBase.species(sys.base_system, i)
 AtomsBase.velocity(sys::AbstractCompositeSystem, i) =  AtomsBase.velocity(sys.base_system, i)
 
-AtomsBase.set_position!(sys::AbstractCompositeSystem, i, x) = AtomsBase.set_position!(sys.base_system, i, x)
 
 Base.length(sys::AbstractCompositeSystem) = length(sys.base_system)
+Base.keys(::AbstractCompositeSystem) = (:cell_vectors, :periodicity)
+
+Base.getindex(sys::AbstractCompositeSystem, i::Int) = sys.base_system[i]
+Base.getindex(sys::AbstractCompositeSystem, ::Colon) = map(i->sys[i], 1:length(sys))
+
 
 """
     add_systems(sys1::T, sys2::T) where {T<:AbstractIsolatedSystem}
@@ -42,14 +47,30 @@ function AtomsBase.set_species!(sys::AbstractSimpleSystem, i, x)
     return sys
 end
 
+function AtomsBase.set_species!(sys::AbstractCompositeSystem, i, x)
+    AtomsBase.set_species!(sys.base_system, i, x)
+    return sys
+end
+
 function AtomsBase.set_position!(sys::AbstractSimpleSystem, i, x)
     setindex!(sys.position, x, i)
     return sys
 end
 
+function AtomsBase.set_position!(sys::AbstractCompositeSystem, i, x)
+    AtomsBase.set_position!(sys.base_system, i, x)
+    return sys
+end
+
 function AtomsBase.set_position!(sys::AbstractSimpleSystem{D}, ::Colon, x::AbstractMatrix{<:Unitful.Length}) where{D}
     @argcheck size(x, 2) == length(sys)
+    @argcheck size(x, 1) == D
     tmp = reinterpret(reshape, SVector{D, eltype(x)}, x)
     AtomsBase.set_position!(sys, :, tmp)
+    return sys
+end
+
+function AtomsBase.set_velocity!(sys::AbstractCompositeSystem, i, x)
+    AtomsBase.set_velocity!(sys.base_system, i, x)
     return sys
 end

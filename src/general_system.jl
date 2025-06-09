@@ -11,10 +11,8 @@ mutable struct GeneralSystem{D, LU, TB} <: AbstractCompositeSystem{D, LU}
     end
 end
 
-GeneralSystem(sys::GeneralSystem) = sys
+GeneralSystem(sys::GeneralSystem) = deepcopy(sys)
 
-Base.getindex(sys::GeneralSystem, i::Int) = sys.base_system[i]
-Base.getindex(sys::GeneralSystem, c::Colon) = sys.base_system[c]
 
 function Base.getindex(sys::GeneralSystem, x::Symbol)
     if x in (:cell_vectors, :periodicity)

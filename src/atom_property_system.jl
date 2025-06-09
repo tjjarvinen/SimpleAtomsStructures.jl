@@ -73,10 +73,10 @@ function Base.getindex(sys::AtomicPropertySystem, i::Int)
 end
 
 Base.getindex(sys::AtomicPropertySystem, x::Symbol) = sys.base_system[x]
-Base.keys(::AtomicPropertySystem) = (:cell_vectors, :periodicity)
-Base.length(sys::AtomicPropertySystem) = length(sys.base_system)
+Base.keys(::AbstractIsolatedSystem) = (:cell_vectors, :periodicity)
+Base.length(sys::AbstractIsolatedSystem) = length(sys.base_system)
 
-function AtomsBase.atomkeys(sys::AtomicPropertySystem)
+function AtomsBase.atomkeys(sys::AbstractIsolatedSystem)
     base_keys = AtomsBase.atomkeys(sys.base_system)
     property_keys = _property_keys(sys)
     # remove double mass
@@ -87,8 +87,8 @@ function AtomsBase.atomkeys(sys::AtomicPropertySystem)
     return (base_keys..., property_keys...)
 end
 
-_property_keys(sys::AtomicPropertySystem) = keys(sys.atom_properties[1])
-_has_property_key(sys::AtomicPropertySystem, x::Symbol) = in(x, _property_keys(sys)) 
+_property_keys(sys::AbstractIsolatedSystem) = keys(sys.atom_properties[1])
+_has_property_key(sys::AbstractIsolatedSystem, x::Symbol) = in(x, _property_keys(sys)) 
 
 
 function AtomsBase.mass(sys::AtomicPropertySystem{D, LU, TB, TP, true}, i::Int) where {D, LU, TB, TP}

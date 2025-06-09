@@ -16,7 +16,7 @@ function SimpleSystem(species::ChemicalSpecies, pos::AbstractVector{<:Unitful.Le
     return SimpleSystem([species], [pos])
 end
 
-SimpleSystem(sys::SimpleSystem) = sys
+SimpleSystem(sys::SimpleSystem) = deepcopy(sys)
 
 function SimpleSystem(ss::Union{AbstractSystem,AtomsVector}, i)
     return SimpleSystem(species(ss, i), position(ss, i))
@@ -100,6 +100,7 @@ function SimpleVelocitySystem(sys::Union{AbstractSystem, AtomsVector}, i)
 end
 
 SimpleVelocitySystem(sys::Union{AbstractSystem, AtomsVector}) = SimpleVelocitySystem(sys, :)
+SimpleVelocitySystem(sys::SimpleVelocitySystem) = deepcopy(sys)
 
 function SimpleVelocitySystem(
     species::ChemicalSpecies, 
@@ -118,7 +119,11 @@ Base.getindex(ss::SimpleVelocitySystem, i::Int) = SimpleAtom(ss.species[i], ss.p
 
 AtomsBase.atomkeys(::SimpleVelocitySystem) = (:position, :velocity, :species)
 AtomsBase.cell(::SimpleVelocitySystem{D, LU, UV, TP, TV}) where{D, LU,UV, TP, TV} = IsolatedCell(D, TP)
-AtomsBase.velocity(sys::SimpleVelocitySystem, i) = sys.velocity[i]
+AtomsBase.velocity(sys::SimpleVelocitySystem, i::Int) = sys.velocity[i]
+AtomsBase.velocity(sys::SimpleVelocitySystem, i) = view(sys.velocity, i)
+AtomsBase.velocity(sys::SimpleVelocitySystem, ::Colon) = sys.velocity
+
+AtomsBase.set_velocity!(sys::SimpleVelocitySystem, i, v) = setindex!(sys.velocity, v, i)
 
 function Base.append!(
     sys1::SimpleVelocitySystem{D, LU, UV, TP, TV}, 
