@@ -76,11 +76,6 @@ function AtomsBase.set_periodicity!(sys::CellSystem{D}, periodicity::NTuple{D, B
     return sys
 end
 
-function AtomsBase.set_cell!(sys::CellSystem{D}, ::IsolatedCell{D}) where{D}
-    sys = sys.base_system
-    return sys
-end
-
 function AtomsBase.set_cell!(sys::CellSystem{D}, cell::PeriodicCell{D}) where{D}
     AtomsBase.set_cell_vectors!(sys, cell_matrix(cell))
     return sys

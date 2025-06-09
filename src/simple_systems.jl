@@ -123,6 +123,8 @@ AtomsBase.velocity(sys::SimpleVelocitySystem, i::Int) = sys.velocity[i]
 AtomsBase.velocity(sys::SimpleVelocitySystem, i) = view(sys.velocity, i)
 AtomsBase.velocity(sys::SimpleVelocitySystem, ::Colon) = sys.velocity
 
+AtomsBase.set_velocity!(sys::SimpleVelocitySystem, i, v) = setindex!(sys.velocity, v, i)
+
 function Base.append!(
     sys1::SimpleVelocitySystem{D, LU, UV, TP, TV}, 
     sys2::SimpleVelocitySystem{D, LU, UV, TP, TV}

@@ -14,7 +14,7 @@ include("Aqua.jl")
     @testset "SimpleSystem" begin
         sys = SimpleSystem(ref.system)
         @test all( position(sys, :) .≈ position( ref.system, :) )
-        @test all( species(sys, :) .== species( ref.system, :) )
+        @test all( species(sys, :) .=== species( ref.system, :) )
         @test isa(cell(sys), IsolatedCell)
         @test all( sys[:periodicity] .== (false, false, false) )
         @test_throws KeyError sys[:dummy] 
@@ -23,7 +23,7 @@ include("Aqua.jl")
         sys = SimpleVelocitySystem(ref.system)
         @test all( position(sys, :) .≈ position( ref.system, :) )
         @test all( velocity(sys, :) .≈ velocity( ref.system, :) )
-        @test all( species(sys, :) .== species( ref.system, :) )
+        @test all( species(sys, :) .=== species( ref.system, :) )
         @test isa(cell(sys), IsolatedCell)
         @test all( sys[:periodicity] .== (false, false, false) )
         @test_throws KeyError sys[:dummy]
@@ -32,7 +32,7 @@ include("Aqua.jl")
         sys = AtomicPropertySystem(ref.system)
         @test all( position(sys, :) .≈ position( ref.system, :) )
         @test all( velocity(sys, :) .≈ velocity( ref.system, :) )
-        @test all( species(sys, :) .== species( ref.system, :) )
+        @test all( species(sys, :) .=== species( ref.system, :) )
         @test all( mass(sys, :) .== mass( ref.system, :) )
         @test isa(cell(sys), IsolatedCell)
         @test all( sys[:periodicity] .== (false, false, false) )
@@ -48,7 +48,7 @@ include("Aqua.jl")
         sys = CellSystem(ref.system)
         @test all( position(sys, :) .≈ position( ref.system, :) )
         @test all( velocity(sys, :) .≈ velocity( ref.system, :) )
-        @test all( species(sys, :) .== species( ref.system, :) )
+        @test all( species(sys, :) .=== species( ref.system, :) )
         @test all( mass(sys, :) .== mass( ref.system, :) )
         @test isa(cell(sys), PeriodicCell)
         @test all( cell_vectors(sys) .≈ ref.cell_vectors )
@@ -67,7 +67,7 @@ include("Aqua.jl")
         @test isa(sys, SimpleAtomsStructures.GeneralSystem)
         @test all( position(sys, :) .≈ position( ref.system, :) )
         @test all( velocity(sys, :) .≈ velocity( ref.system, :) )
-        @test all( species(sys, :) .== species( ref.system, :) )
+        @test all( species(sys, :) .=== species( ref.system, :) )
         @test all( mass(sys, :) .== mass( ref.system, :) )
         @test isa(cell(sys), PeriodicCell)
         @test all( cell_vectors(sys) .≈ ref.cell_vectors )
@@ -141,6 +141,57 @@ include("Aqua.jl")
         @test all( position(va, :) .≈ position(sys, :) )
         @test all( velocity(va, :) .≈ velocity(sys, :) )
     end
+
+    @testset "Views" begin
+        sys = GenericSystem(ref.system)
+        @testset "SimpleSystemView" begin
+            sys1 = SimpleSystem(sys)
+            sv = SimpleSystemView(sys1, 1:2)
+            AtomsBase.set_species!(sv, 2, ChemicalSpecies(:Al))
+            translate_system!(sv, [1., 2., 3.]u"Å")
+            @test all( species(sv, :) .=== species(sys1, 1:2) )
+            @test all( position(sv, :) .≈ position(sys1, 1:2) )
+            @test isa(cell(sv), IsolatedCell)
+            @test all( sv[:] .== sys1[1:2] )
+            @test_throws KeyError sv[:dummy]
+        end
+        @testset "SimpleVelocitySystemView" begin
+            sys1 = SimpleVelocitySystem(sys)
+            sv = SimpleVelocitySystemView(sys1, 1:2)
+            AtomsBase.set_species!(sv, 2, ChemicalSpecies(:U))
+            AtomsBase.set_position!(sv, 1, [1., 2., 3.]u"Å")
+            AtomsBase.set_velocity!(sv, 2, [1., 2., 3.]u"Å/s")
+            @test all( species(sv, :) .=== species(sys1, 1:2) )
+            @test all( position(sv, :) .≈ position(sys1, 1:2) )
+            @test all( velocity(sv, :) .≈ velocity(sys1, 1:2) )
+            @test isa(cell(sv), IsolatedCell) 
+            @test all( sv[:] .== sys1[1:2] )
+            @test_throws KeyError sv[:dummy]
+        end
+        @testset "AtomicPropertySystemView" begin
+            ap = AtomicPropertySystem(sys)
+            av = AtomicPropertySystemView(ap, 1:2)
+            @test all( species(av, :) .=== species(ap, 1:2) )
+            @test all( position(av, :) .≈ position(ap, 1:2) )
+            @test all( velocity(av, :) .≈ velocity(ap, 1:2) )
+            @test isa(cell(av), IsolatedCell)
+            @test all( av[:] .== ap[1:2] ) 
+            @test_throws KeyError av[:dummy]
+        end
+        @testset "CellSystemView" begin
+            cs = CellSystem(sys)
+            cv = CellSystemView(cs, 1:2)
+            @test all( species(cv, :) .=== species(sys, 1:2) )
+            @test all( position(cv, :) .≈ position(sys, 1:2) )
+            @test all( velocity(cv, :) .≈ velocity(sys, 1:2) )
+            @test isa(cell(cv), PeriodicCell)
+            @test all( cell_vectors(cv) .≈ cell_vectors(cs) )
+            @test all( periodicity(cv) .== periodicity(cs) )
+            @test all( cv[:] .== cs[1:2] )
+            @test_throws KeyError cv[:dummy]    
+        end
+    end
+
     @testset "Trajectory" begin
         sys = GenericSystem(ref.system)
         sys2 = deepcopy( sys )
