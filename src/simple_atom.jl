@@ -63,6 +63,11 @@ end
 function SimpleAtom(at::Union{AtomsBase.Atom, AtomsBase.AtomView})
     spc = species(at)
     r = position(at)
+    if haskey(at, :velocity)
+        v = velocity(at)
+        properties = NamedTuple( k=>at[k] for k in keys(at) if ! in(k, (:species, :position, :velocity)))
+        return SimpleAtom(spc, SVector(r...), SVector(v...); properties...)
+    end
     properties = NamedTuple( k=>at[k] for k in keys(at) if ! in(k, (:species, :position)))
     return SimpleAtom(spc, r; properties...)
 end

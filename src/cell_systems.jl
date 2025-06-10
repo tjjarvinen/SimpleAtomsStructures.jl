@@ -26,7 +26,6 @@ CellSystem(sys::AbstractSystem) = CellSystem( AtomicPropertySystem(sys), cell(sy
 CellSystem(sys::AtomsVector) = AtomicPropertySystem(sys)
 CellSystem(sys::CellSystem) = deepcopy(sys)
 
-
 function Base.getindex(sys::CellSystem, x::Symbol)
     if x == :cell_vectors
         cell_vectors(cell(sys))
@@ -37,11 +36,7 @@ function Base.getindex(sys::CellSystem, x::Symbol)
     end
 end
 
-
-
-
 AtomsBase.cell(sys::CellSystem) = sys.cell
-
 
 function Base.append!(sys1::T, sys2::T) where{T<:CellSystem}
     @argcheck cell(sys1) == cell(sys2)

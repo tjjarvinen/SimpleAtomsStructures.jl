@@ -151,7 +151,18 @@ include("Aqua.jl")
         @test position(sa) ≈ [1.0, 2.0, 3.0]u"Å"
         @test velocity(sa) ≈ [0.1, 0.2, 0.3]u"Å/s"
         @test mass(sa) == 12.0u"u"
-        @test sa[:charge] == -1.0u"q"    
+        @test sa[:charge] == -1.0u"q"
+        ab = AtomsBase.Atom( :O, [1.0, 0.0, 0.0]u"Å")
+        sa2 = SimpleAtom(ab)
+        @test species(sa2) === ChemicalSpecies(:O)
+        @test position(sa2) ≈ [1.0, 0.0, 0.0]u"Å"
+        ab = AtomsBase.Atom(ChemicalSpecies(:C), [1.0, 2.0, 3.0]u"Å", [0.1, 0.2, 0.3]u"Å/s"; mass = 12.0u"u", charge = -1.0u"q")
+        sa3 = SimpleAtom(ab)
+        @test species(sa3) === ChemicalSpecies(:C)
+        @test position(sa3) ≈ [1.0, 2.0, 3.0]u"Å"
+        @test velocity(sa3) ≈ [0.1, 0.2, 0.3]u"Å/s"
+        @test mass(sa3) == 12.0u"u"
+        @test sa3[:charge] == -1.0u"q"
     end
 
     @testset "Views" begin
