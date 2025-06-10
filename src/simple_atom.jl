@@ -1,7 +1,25 @@
+# NOTE SimpleAtom could be improved by designing better constructors.
+# Current ones have some tests for consitency or avoid them completely.
 
-# This might not be the most efficient implementation due to
-# check that position and velocity have same dimensions
-# so it might need an update
+"""
+    SimpleAtom(id::AtomsBase.AtomId, r::SVector; kwargs...)
+    SimpleAtom(id::AtomsBase.AtomId, r::SVector, v::SVector; kwargs...)
+    SimpleAtom(sa::SimpleAtom; kwargs...
+
+Stucture to represent a single atom with species, position, and optional velocity and other properties.
+
+The `SimpleAtom` is bitstype when the data is bitstypes.
+
+Mass is set to the mass of the species by default, but can be overridden with a keyword argument.
+
+# Examples
+```julia
+SimpleAtom(:H, [0.0, 0.0, 0.0]u"Å")
+SimpleAtom(:O, [1.0, 0.0, 0.0]u"Å", [0.1, 0.0, 0.0]u"Å/s"; mass = 16.0u"u", charge = -1.0u"q")
+SimpleAtom(ChemicalSpecies(:H), [0.0, 0.0, 0.0]u"Å")
+SimpleAtom( :O => [1.0, 0.0, 0.0]u"Å" )
+```
+"""
 struct SimpleAtom{D, TD, TP}
     data::TD
     function SimpleAtom(data::NamedTuple)
@@ -60,6 +78,16 @@ end
 
 function SimpleAtom(id::AtomsBase.AtomId, r::AbstractVector{<:Unitful.Length}; kwargs...)
     return SimpleAtom(ChemicalSpecies(id), r; kwargs...)
+end
+
+
+function SimpleAtom(
+        id::AtomsBase.AtomId,
+        r::AbstractVector{<:Unitful.Length},
+        v::AbstractVector{<:Unitful.Velocity};
+        kwargs...
+    )
+    return SimpleAtom(ChemicalSpecies(id), SVector(r...), SVector(v...); kwargs...)
 end
 
 function SimpleAtom(pr::Pair; kwargs...)

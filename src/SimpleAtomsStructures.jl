@@ -14,7 +14,7 @@ export AtomicPropertySystem
 export AtomicPropertySystemView
 export CellSystem
 export CellSystemView
-export GenericSystem
+export GeneralSystem
 export SimpleAtom
 export SimpleSystem
 export SimpleSystemView
@@ -33,6 +33,7 @@ export distance
 export distance_vector
 export fractional_coordinates
 export fractional_coordinates_as_matrix
+export generic_system
 export inv_cell
 export position_as_matrix
 export rotate_system
