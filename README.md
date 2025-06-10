@@ -53,20 +53,20 @@ Depending on what information you provide you get different structure
 ```julia
 # Build based on vector of atoms
 # generic_system(atoms::AbstractVector{SimpeAtom}; kwargs...)
-sys = generic_system([
+generic_system([
     SimpleAtom(:H, [0.0, 0.0, 0.0]u"Å"), 
     SimpleAtom(:O, [1.0, 0.0, 0.0]u"Å")]
 )
 
 # Same but added key for energy
-sys = generic_system([
+generic_system([
     SimpleAtom(:H, [0.0, 0.0, 0.0]u"Å"),
     SimpleAtom(:O, [1.0, 0.0, 0.0]u"Å")];
     energy = 10.0u"eV"
 )
 
 # Add cell to the system
-sys = generic_system([
+generic_system([
     SimpleAtom(:H, [0.0, 0.0, 0.0]u"Å"),
     SimpleAtom(:O, [1.0, 0.0, 0.0]u"Å")]; 
     cell_vectors = [[1.0, 0.0, 0.0]u"Å", [0.0, 1.0, 0.0]u"Å", [0.0, 0.0, 1.0]u"Å"], 
@@ -78,7 +78,7 @@ sys = generic_system([
 sys = generic_system([:H => [0.0, 0.0, 0.0]u"Å", :O => [1.0, 0.0, 0.0]u"Å"])
 
 # Create a system vectors of atom symbols, positions and velocities
-# geric_system(spc, pos, vel)
+# geric_system(spc, pos, [vel]; kwargs...)
 sys = generic_system(
     [:H, :O],
     [[0.0, 0.0, 0.0]u"Å", [1.0, 0.0, 0.0]u"Å"],
