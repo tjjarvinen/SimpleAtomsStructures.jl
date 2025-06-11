@@ -7,11 +7,10 @@ mutable struct CellSystem{D, LU, TB, TC} <: AbstractCompositeSystem{D, LU}
     end
 end
 
+CellSystem(sys::Union{AbstractSystem,AtomsVector}, ::IsolatedCell) = AtomicPropertySystem(sys)
+
 function CellSystem(sys::Union{AbstractSystem,AtomsVector}, i)
     base_sys = AtomicPropertySystem(sys, i)
-    if isa(cell(sys), IsolatedCell)
-        return base_sys
-    end
     return CellSystem(base_sys, cell(sys))
 end
 
@@ -23,9 +22,9 @@ function CellSystem(sys::Union{AbstractSystem,AtomsVector}, spc::ChemicalSpecies
     return CellSystem(base_sys, cell(sys))
 end
 
-CellSystem(sys::Union{AbstractSystem,AtomsVector}) = CellSystem(sys, :)
+CellSystem(sys::AbstractSystem) = CellSystem( AtomicPropertySystem(sys), cell(sys) )
+CellSystem(sys::AtomsVector) = AtomicPropertySystem(sys)
 CellSystem(sys::CellSystem) = deepcopy(sys)
-
 
 function Base.getindex(sys::CellSystem, x::Symbol)
     if x == :cell_vectors
@@ -37,11 +36,7 @@ function Base.getindex(sys::CellSystem, x::Symbol)
     end
 end
 
-
-
-
 AtomsBase.cell(sys::CellSystem) = sys.cell
-
 
 function Base.append!(sys1::T, sys2::T) where{T<:CellSystem}
     @argcheck cell(sys1) == cell(sys2)

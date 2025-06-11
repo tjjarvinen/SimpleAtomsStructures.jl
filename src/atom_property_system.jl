@@ -13,20 +13,6 @@ mutable struct AtomicPropertySystem{D, LU, TB, TP, SM} <: AbstractIsolatedSystem
     end
 end
 
-# function AtomicPropertySystem(sys::AbstractSystem, properties::NamedTuple)
-#     # ignore atom_properties on sys and use properties as atom_properties
-#     # also ignore global system properties
-#     @argcheck all(x->length(x)==length(sys), properties)
-#     prop_names = Tuple( x  for x in keys(properties) if !(x in (:species, :position, :velocity)) )
-#     el_types = Tuple( eltype(properties[key]) for key in prop_names )
-#     TP = NamedTuple{ prop_names, Tuple{el_types...} }
-#     prop = Vector{TP}(undef, length(sys))
-#     for i in 1:length(sys)
-#         prop[i] = NamedTuple( key =>  properties[key][i] for key in prop_names )
-#     end
-#     return AtomicPropertySystem(sys, prop)
-# end
-
 
 AtomicPropertySystem(sys::AtomicPropertySystem) = deepcopy(sys)
 function _AtomicPropertySystem(sys::AtomicPropertySystem, i)
@@ -61,10 +47,6 @@ function AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}, i::BitVec
     return AtomicPropertySystem(sys, j)
 end
 
-# function AtomicPropertySystem(sys::Union{AbstractSystem, AtomsVector}, spc::ChemicalSpecies)
-#     i = species(sys, :) .== spc
-#     return AtomicPropertySystem(sys, i)
-# end
 
 
 function Base.getindex(sys::AtomicPropertySystem, i::Int)

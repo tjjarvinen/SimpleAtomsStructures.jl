@@ -3,186 +3,236 @@
 [![Build Status](https://github.com/tjjarvinen/SimpleAtomsStructures.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/tjjarvinen/SimpleAtomsStructures.jl/actions/workflows/CI.yml?query=branch%3Amain)
 
 
-Design idea here is that there is a simple structure with only species and position information. This structure is then wrapped to other structures that add more information 
+New implementations for AtomsBase system structures
 
-You will have either 
-1. `SimpleSystem` -> `AtomicPropertySystem` -> `CellSystem` -> `GeneralSystem`
+## Atom Structure
 
-or 
+New atom structure `SimpleAtom` is a bits type structure that aims to be a simple small structure.
 
-2. `SimpleVelocitySystem` -> `AtomicPropertySystem` -> `CellSystem` -> `GeneralSystem`
-
-depending on what information you need to store.
-
-All systems are build with `GenericSysten` call
+You can create `SimpleAtom` in one of the following ways
 
 ```julia
-GenericSystem(AbstractSystem, <optional subsystem definition>; global_features...)
-GenericSystem(species, positions; global_features...)
-GenericSystem(species, positions, velocity; global_features...)
-GenericSystem(AtomsVector; global_features...)
+SimpleAtom(:H, [0.0, 0.0, 0.0]u"Å")
+SimpleAtom( 1, [0.0, 0.0, 0.0]u"Å") # same as above
+SimpleAtom(:O, [1.0, 0.0, 0.0]u"Å", [0.1, 0.0, 0.0]u"Å/s"; mass = 16.0u"u", charge = -1.0u"q")
+SimpleAtom(ChemicalSpecies(:H), [0.0, 0.0, 0.0]u"Å")
+SimpleAtom( :O => [1.0, 0.0, 0.0]u"Å" )
 ```
 
-## Different Systems Structures
 
-Initilize with
+Comparison to AtomsBase `Atom`
+```julia-repl
+julia> ab_atom = AtomsBase.Atom( :O, [1.0, 0.0, 0.0]u"Å" )
+Atom(O, Z = 8, m = 15.999 u):
+    position          : [1,0,0]u"Å"
+    species           : O
 
-```julia
-using AtomsBase
-using AtomsBaseTesting
-using SimpleAtomsStructures
+julia> sa = SimpleAtom( :O, [1.0, 0.0, 0.0]u"Å" )
+SimpleAtom(O, Z = 8, m = 15.999 u):
+    position          : [1,0,0]u"Å"
+    species           : O
 
+julia> Base.summarysize(ab_atom)
+456
 
-ref = make_test_system()
+julia> Base.summarysize(sa)
+32
+
+julia> isbits(ab_atom)
+false
+
+julia> isbits(sa)
+true
 ```
 
-After that you can create systems by
+## System Structures
+
+Under the hood there are several different system structures that differ on what data they store. But you only need to call `generic_system` to build all of them.
+Depending on what information you provide you get different structure
 
 ```julia
+# Build based on vector of atoms
+# generic_system(atoms::AbstractVector{SimpeAtom}; kwargs...)
+generic_system([
+    SimpleAtom(:H, [0.0, 0.0, 0.0]u"Å"), 
+    SimpleAtom(:O, [1.0, 0.0, 0.0]u"Å")]
+)
 
-# Only species and positions
-julia> SimpleSystem(ref.system)
-SimpleSystem(CHeH₂N, periodicity = FFF):
-    SimpleAtom(H,  [-1.19999, -0.521534,  1.17446]u"Å")
-    SimpleAtom(H,  [0.532801, -0.653995, 0.145677]u"Å")
-    SimpleAtom(C,  [ 1.08169, -0.627532,  1.37471]u"Å")
-    SimpleAtom(N,  [ 2.85773, -0.37975, 0.572554]u"Å")
-    SimpleAtom(He, [-2.00971, -0.875141,  1.14164]u"Å")
+# Same but added key for energy
+generic_system([
+    SimpleAtom(:H, [0.0, 0.0, 0.0]u"Å"),
+    SimpleAtom(:O, [1.0, 0.0, 0.0]u"Å")];
+    energy = 10.0u"eV"
+)
 
-# Add velocities
-julia> SimpleVelocitySystem(ref.system)
-SimpleVelocitySystem(CHeH₂N, periodicity = FFF):
-    SimpleAtom(H,  [-1.19999, -0.521534,  1.17446]u"Å", [ -306058,  -660815, 1.51741e+06]u"m s^-1")
-    SimpleAtom(H,  [0.532801, -0.653995, 0.145677]u"Å", [  498585,   254433,  -798499]u"m s^-1")
-    SimpleAtom(C,  [ 1.08169, -0.627532,  1.37471]u"Å", [-17145.5,  -835281,  -645397]u"m s^-1")
-    SimpleAtom(N,  [ 2.85773, -0.37975, 0.572554]u"Å", [1.08308e+06,  -713829,  -420172]u"m s^-1")
-    SimpleAtom(He, [-2.00971, -0.875141,  1.14164]u"Å", [-2.34931e+06,   197953,   597271]u"m s^-1")
+# Add cell to the system
+generic_system([
+    SimpleAtom(:H, [0.0, 0.0, 0.0]u"Å"),
+    SimpleAtom(:O, [1.0, 0.0, 0.0]u"Å")]; 
+    cell_vectors = [[1.0, 0.0, 0.0]u"Å", [0.0, 1.0, 0.0]u"Å", [0.0, 0.0, 1.0]u"Å"], 
+    periodicity = (true, true, true)
+)
 
-# Add general atom features
-julia> sys = AtomicPropertySystem(ref.system);
-julia> atomkeys(sys)
-(:position, :velocity, :species, :mass, :magnetic_moment, :charge, :vdw_radius, :covalent_radius)
+# Create a system from an array of pairs
+# generic_system(AbstractVector(<:Pair); kwargs...)
+sys = generic_system([:H => [0.0, 0.0, 0.0]u"Å", :O => [1.0, 0.0, 0.0]u"Å"])
 
-# All but global features
-julia> CellSystem(ref.system)
-CellSystem(CHeH₂N, periodicity = TTF):
-    cell_vectors      : [ 1.50304 0.850344 0.717239;
-                          0.36113  1.00814 0.814712;
-                          0.06828 0.381122  2.12908]u"Å"
-
-    SimpleAtom(H,  [-1.19999, -0.521534,  1.17446]u"Å", [ -306058,  -660815, 1.51741e+06]u"m s^-1")
-    SimpleAtom(H,  [0.532801, -0.653995, 0.145677]u"Å", [  498585,   254433,  -798499]u"m s^-1")
-    SimpleAtom(C,  [ 1.08169, -0.627532,  1.37471]u"Å", [-17145.5,  -835281,  -645397]u"m s^-1")
-    SimpleAtom(N,  [ 2.85773, -0.37975, 0.572554]u"Å", [1.08308e+06,  -713829,  -420172]u"m s^-1")
-    SimpleAtom(He, [-2.00971, -0.875141,  1.14164]u"Å", [-2.34931e+06,   197953,   597271]u"m s^-1")
-
-# Everything supported
-julia> GenericSystem(ref.system)  # is equal to ref.system
-GeneralSystem(CHeH₂N, periodicity = TTF):
-    cell_vectors      : [ 1.50304 0.850344 0.717239;
-                          0.36113  1.00814 0.814712;
-                          0.06828 0.381122  2.12908]u"Å"
-    multiplicity      : 2
-    charge            : -1 e
-    extra_data        : 42
-
-    SimpleAtom(H,  [-1.19999, -0.521534,  1.17446]u"Å", [ -306058,  -660815, 1.51741e+06]u"m s^-1")
-    SimpleAtom(H,  [0.532801, -0.653995, 0.145677]u"Å", [  498585,   254433,  -798499]u"m s^-1")
-    SimpleAtom(C,  [ 1.08169, -0.627532,  1.37471]u"Å", [-17145.5,  -835281,  -645397]u"m s^-1")
-    SimpleAtom(N,  [ 2.85773, -0.37975, 0.572554]u"Å", [1.08308e+06,  -713829,  -420172]u"m s^-1")
-    SimpleAtom(He, [-2.00971, -0.875141,  1.14164]u"Å", [-2.34931e+06,   197953,   597271]u"m s^-1")
-
-# same as useing isolated_system from AtomsBase
-julia> hydrogen = GenericSystem([ 
-           :H => [0.1, 0, 0.]u"Å",
-           :H => [0, 0, 1.]u"Å",
-           :H => [4., 0, 0.]u"Å",
-           :H => [4., 1., 0.]u"Å"
-       ])
-SimpleSystem(H₄, periodicity = FFF):
-    SimpleAtom(H,  [     0.1,        0,        0]u"Å")
-    SimpleAtom(H,  [       0,        0,        1]u"Å")
-    SimpleAtom(H,  [       4,        0,        0]u"Å")
-    SimpleAtom(H,  [       4,        1,        0]u"Å")
+# Create a system vectors of atom symbols, positions and velocities
+# geric_system(spc, pos, [vel]; kwargs...)
+sys = generic_system(
+    [:H, :O],
+    [[0.0, 0.0, 0.0]u"Å", [1.0, 0.0, 0.0]u"Å"],
+    [[0.1, 0.0, 0.0]u"Å/s", [0.2, 0.0, 0.0]u"Å/s"];
+)
 ```
 
-## Changing structures
+### Build System from Other Systems
+
+You can build system from other system and modify system global features
 
 ```julia
-# Add global features
-julia> GenericSystem(ref.system; my_property="hello")
-GeneralSystem(CHeH₂N, periodicity = TTF):
-    cell_vectors      : [ 1.50304 0.850344 0.717239;
-                          0.36113  1.00814 0.814712;
-                          0.06828 0.381122  2.12908]u"Å"
-    multiplicity      : 2
-    charge            : -1 e
-    my_property       : hello
-    extra_data        : 42
+# Form a copy of old system
+# gneric_system(old_sys; kwargs...)
+new_sys = generic_system(old_sys)
 
-    SimpleAtom(H,  [-1.19999, -0.521534,  1.17446]u"Å", [ -306058,  -660815, 1.51741e+06]u"m s^-1")
-    SimpleAtom(H,  [0.532801, -0.653995, 0.145677]u"Å", [  498585,   254433,  -798499]u"m s^-1")
-    SimpleAtom(C,  [ 1.08169, -0.627532,  1.37471]u"Å", [-17145.5,  -835281,  -645397]u"m s^-1")
-    SimpleAtom(N,  [ 2.85773, -0.37975, 0.572554]u"Å", [1.08308e+06,  -713829,  -420172]u"m s^-1")
-    SimpleAtom(He, [-2.00971, -0.875141,  1.14164]u"Å", [-2.34931e+06,   197953,   597271]u"m s^-1")
+# Copy system and add a global feature
+new_sys = generic_system(old_sys; energy=10.0u"eV")
 
-# Take a subsystem (and discard global features)
-julia> GenericSystem(ref.system, 1:3; subs_name="my subsystem")
-GeneralSystem(CH₂, periodicity = TTF):
-    cell_vectors      : [ 1.50304 0.850344 0.717239;
-                          0.36113  1.00814 0.814712;
-                          0.06828 0.381122  2.12908]u"Å"
-    subs_name         : my subsystem
-
-    SimpleAtom(H,  [-1.19999, -0.521534,  1.17446]u"Å", [ -306058,  -660815, 1.51741e+06]u"m s^-1")
-    SimpleAtom(H,  [0.532801, -0.653995, 0.145677]u"Å", [  498585,   254433,  -798499]u"m s^-1")
-    SimpleAtom(C,  [ 1.08169, -0.627532,  1.37471]u"Å", [-17145.5,  -835281,  -645397]u"m s^-1")
-
-# Subsystem with only Hydrogen and Helium
-julia> GenericSystem(ref.system, ChemicalSpecies(:H), ChemicalSpecies(:He); id=1)
-GeneralSystem(HeH₂, periodicity = TTF):
-    cell_vectors      : [ 1.50304 0.850344 0.717239;
-                          0.36113  1.00814 0.814712;
-                          0.06828 0.381122  2.12908]u"Å"
-    id                : 1
-
-    SimpleAtom(H,  [-1.19999, -0.521534,  1.17446]u"Å", [ -306058,  -660815, 1.51741e+06]u"m s^-1")
-    SimpleAtom(H,  [0.532801, -0.653995, 0.145677]u"Å", [  498585,   254433,  -798499]u"m s^-1")
-    SimpleAtom(He, [-2.00971, -0.875141,  1.14164]u"Å", [-2.34931e+06,   197953,   597271]u"m s^-1")
+# Copy system and add/change cell
+new_sys = generic_system(
+    old_sys; 
+    cell_vectors = [[1.0, 0.0, 0.0]u"Å", [0.0, 1.0, 0.0]u"Å", [0.0, 0.0, 1.0]u"Å"],
+    periodicity = (true, true, true)
+)
 ```
 
-## Atom structure
+### Create a Subsystem from an Existing System
 
-There is a `SimpleAtom` structure that represents atoms
+The created subsystem does not share any data with the system it was build
 
 ```julia
-julia> SimpleAtom(:H, zeros(3)*u"Å")
-SimpleAtom(H, Z = 1, m = 1.008 u):
-    position          : [0,0,0]u"Å"
-    species           : H
+# Subsystem with atoms 1:5
+# generic_system(sys, subsys_definition...; kwargs...)
+sub_sys = generic_system(sys, 1:5)
 
-# Add extra properties
-julia> atoms = [
-          SimpleAtom(:H, zeros(3)*u"Å"; my_property=1),
-          SimpleAtom(:H, ones(3)*u"Å"; my_property=2)
-       ]
-2-element Vector{SimpleAtom{3, @NamedTuple{species::ChemicalSpecies, position::StaticArraysCore.SVector{3, Quantity{Float64, 𝐋, Unitful.FreeUnits{(Å,), 𝐋, nothing}}}, my_property::Int64}, Quantity{Float64, 𝐋, Unitful.FreeUnits{(Å,), 𝐋, nothing}}}}:
- SimpleAtom(H,  [       0,        0,        0]u"Å")
- SimpleAtom(H,  [       1,        1,        1]u"Å")
+# Subsystem with all H and O atoms from sys
+sub_sys = generic_system(sys, ChemicalSpecies(:H), ChemicalSpecies(:O))
 
-# Vector of SimpleAtoms has core AtomsBase interface implemented
-julia> position(atoms, 2)
-3-element StaticArraysCore.SVector{3, Quantity{Float64, 𝐋, Unitful.FreeUnits{(Å,), 𝐋, nothing}}} with indices SOneTo(3):
- 1.0 Å
- 1.0 Å
- 1.0 Å
+# Add global feature to subsystem
+sub_sys = generic_system(sys, 1:5; label="the first 5 atoms")
+```
 
-# Create full system from vector of atoms
-julia> GenericSystem(atoms)
-AtomicPropertySystem(H₂, periodicity = FFF):
-    SimpleAtom(H,  [       0,        0,        0]u"Å")
-    SimpleAtom(H,  [       1,        1,        1]u"Å")
+### Subsystem Views
 
+You can create subsystems that share all data with the host system by calling `system_view`
 
+```julia
+# Subsystem with atoms 1:5
+# system_view(sys, subsys_definition...)
+syb_sys = system_view(sys, 1:5)
 
+# Subsystem with all H and O atoms from sys
+sub_sys = system_view(sys, ChemicalSpecies(:H), ChemicalSpecies(:O))
+```
+
+Any changes you make to `system_view` structures is made to host system and vise versa.
+
+Note that `system_view` does not see the global features of the host system.
+
+## Changing Systems
+
+AtomsBase defines funtions to modify structures, the following list is supported
+
+- `set_position!(system, i, x)` - all structures
+- `set_velocity!(system, i, v)` - all structures that have velocity
+- `set_species!(system, i, spc)` - all structures
+- `set_cell!(system, cell)` - only for structures with `PeriodicCell` and to another `PeriodicCell` with same dimension. System view structures do not support cell update.
+- `set_cell_vectors!(system, bb)` - same as for `set_cell`
+- `set_periodicity!(cell, pbc)` - same as for `set_cell`
+- `append!(system1, system2)` - if systems have same information fields (e.g. both have velocity), same cell and dont have global features.
+
+**Example**
+
+```julia
+sys = generic_system(
+    [:H, :O],
+    [[0.0, 0.0, 0.0]u"Å", [1.0, 0.0, 0.0]u"Å"],
+    [[0.1, 0.0, 0.0]u"Å/s", [0.2, 0.0, 0.0]u"Å/s"];
+)
+
+AtomsBase.set_position!(sys, 2, [0.0, 1.0, 0.0]u"Å")
+AtomsBase.set_velocity!(sys, 2, [0.0, 0.2, 0.0]u"Å/s")
+AtomsBase.set_species!(sys, 1, ChemicalSpecies(:N))
+```
+
+## Quality of Life Extensions to AtomsBase
+
+**Methods to change positions**
+
+```julia
+center_of_mass(sys)
+
+# translate the whole system by r
+translate_system!(sys, r)
+
+# translate a copy of system by r
+translate_system(sys, r)
+
+# rotate the system
+using Rotations
+rot = rand(RotMatrix{3})
+rotate_system!(sys, rot)
+
+# rotate a copy of the system
+rotate_system(sys, rot)
+```
+
+**Add system together or repeat them**
+
+```julia
+# make system that has sys2 added to sys1, keep sys1 and sys2 as they are
+add_systems(sys1, sys2)
+
+# repeat system along cell vectors
+# repeat system 3 times along all cell vectors
+repeat(sys, 3)
+
+# repeat 2 times on the first cell vector, 3 times on th esecond cell vector
+# and 4 times along the third cell vector
+repeat(sys, (2,3,4))
+```
+
+**Methods to get information from systems**
+
+```julia
+# distance of atoms i and j as a vector
+distance_vector(sys, i , j)
+
+# distance of atoms i and j
+distance(sys, i, j)
+
+# bond angle of atom i, j and k (j->i vs j->k)
+bond_angle(sys, i, j, k)
+
+# dihedral angle of atoms i, j, k and m
+dihedral_angle(sys, i, j, k, m)
+```
+
+### Fractional Coordinate Methods
+
+```julia
+# get inverse cell of the system as matrix
+inv_cell(sys)
+
+# get cell_vectors as matrix
+cell_matrix(sys)
+
+# fractional coordinates of atom(s) i
+fractional_coordinates(sys, i)
+
+# fractional coordinates as matrix for atom(s) i
+fractional_coordinates_as_matrix(sys, i)
+
+# wrap atoms inside the cell
+wrap_coordinates!(sys)
 ```

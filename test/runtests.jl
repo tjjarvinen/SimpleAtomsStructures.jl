@@ -63,7 +63,7 @@ include("Aqua.jl")
         end
     end
     @testset "GeneralSystem" begin
-        sys = GenericSystem(ref.system)
+        sys = generic_system(ref.system)
         @test isa(sys, SimpleAtomsStructures.GeneralSystem)
         @test all( position(sys, :) .≈ position( ref.system, :) )
         @test all( velocity(sys, :) .≈ velocity( ref.system, :) )
@@ -106,7 +106,7 @@ include("Aqua.jl")
         @test length(sys3) == length(sys) + length(sys2)
         
         # now with cell
-        sys = GenericSystem(ref.system)
+        sys = generic_system(ref.system)
 
         fp = fractional_coordinates(sys, :)
         @test length(fp) == length(sys)
@@ -132,7 +132,7 @@ include("Aqua.jl")
         @test c2[3] ≈ 3*c1[3]      
     end
     @testset "SimpleAtom" begin
-        sys = GenericSystem(ref.system)
+        sys = generic_system(ref.system)
         va = sys[:]
         @test all( k -> k in atomkeys(sys), atomkeys(va) )
         @test all( k -> k in atomkeys(va), atomkeys(sys) )
@@ -140,10 +140,33 @@ include("Aqua.jl")
         @test all( species(va, :) .== species(sys, :) )
         @test all( position(va, :) .≈ position(sys, :) )
         @test all( velocity(va, :) .≈ velocity(sys, :) )
+        sa = SimpleAtom( :H, [0.0, 0.0, 0.0]u"Å" )
+        @test species(sa) === ChemicalSpecies(:H)
+        @test position(sa) ≈ [0.0, 0.0, 0.0]u"Å"
+        sa = SimpleAtom( :O => [1.0, 0.0, 0.0]u"Å" )
+        @test species(sa) === ChemicalSpecies(:O)
+        @test position(sa) ≈ [1.0, 0.0, 0.0]u"Å"
+        sa = SimpleAtom( ChemicalSpecies(:C), [1.0, 2.0, 3.0]u"Å", [0.1, 0.2, 0.3]u"Å/s"; mass = 12.0u"u", charge = -1.0u"q" )
+        @test species(sa) === ChemicalSpecies(:C)
+        @test position(sa) ≈ [1.0, 2.0, 3.0]u"Å"
+        @test velocity(sa) ≈ [0.1, 0.2, 0.3]u"Å/s"
+        @test mass(sa) == 12.0u"u"
+        @test sa[:charge] == -1.0u"q"
+        ab = AtomsBase.Atom( :O, [1.0, 0.0, 0.0]u"Å")
+        sa2 = SimpleAtom(ab)
+        @test species(sa2) === ChemicalSpecies(:O)
+        @test position(sa2) ≈ [1.0, 0.0, 0.0]u"Å"
+        ab = AtomsBase.Atom(ChemicalSpecies(:C), [1.0, 2.0, 3.0]u"Å", [0.1, 0.2, 0.3]u"Å/s"; mass = 12.0u"u", charge = -1.0u"q")
+        sa3 = SimpleAtom(ab)
+        @test species(sa3) === ChemicalSpecies(:C)
+        @test position(sa3) ≈ [1.0, 2.0, 3.0]u"Å"
+        @test velocity(sa3) ≈ [0.1, 0.2, 0.3]u"Å/s"
+        @test mass(sa3) == 12.0u"u"
+        @test sa3[:charge] == -1.0u"q"
     end
 
     @testset "Views" begin
-        sys = GenericSystem(ref.system)
+        sys = generic_system(ref.system)
         @testset "SimpleSystemView" begin
             sys1 = SimpleSystem(sys)
             sv = SimpleSystemView(sys1, 1:2)
@@ -193,7 +216,7 @@ include("Aqua.jl")
     end
 
     @testset "Trajectory" begin
-        sys = GenericSystem(ref.system)
+        sys = generic_system(ref.system)
         sys2 = deepcopy( sys )
         translate_system!(sys2, [1., 2., 3.]u"Å")
         trj = VelocityTrajectory([sys, sys2])

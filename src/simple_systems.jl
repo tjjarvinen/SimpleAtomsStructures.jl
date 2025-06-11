@@ -1,15 +1,35 @@
 
+"""
+    SimpleSystem{D, LU, TP} <: AbstractSimpleSystem{D, LU}
 
+A simple system that holds only species and positions of atoms, without any additional properties.
+
+SimpleSystem has `IsolatedCell` as its cell.
+
+No intended to be called directly. Intead use `generic_system` to build systems.
+
+# Type Parameters
+- `D`: Dimension of the system (e.g., 2 or 3).
+- `LU`: Unit of length for positions (LU=unit(TP)).
+- `TP`: Type of position vector, in form of `SVector{D, TP}` where `TP` is a unitful length type.
+
+# Fields
+- `species`: A vector of `ChemicalSpecies` representing the species of each atom.
+- `position`: A vector of position vectors, each of type `SVector{D, TP}`.
+"""
 mutable struct SimpleSystem{D, LU, TP} <: AbstractSimpleSystem{D, LU}
     species::Vector{ChemicalSpecies}
     position::Vector{SVector{D, TP}}
-    function SimpleSystem(species::AbstractVector{ChemicalSpecies}, r::AbstractVector{<:AbstractVector})
+    function SimpleSystem(species::AbstractVector{ChemicalSpecies}, r::AbstractVector{SVector{D, TP}}) where{D,TP<:Unitful.Length}
         @argcheck length(species) == length(r)
-        D  = (length∘eltype)(r)
-        TP = (eltype∘eltype)(r)
         LU = unit(TP)
         new{D, LU, TP}(species, r)
     end
+end
+
+function SimpleSystem(species::AbstractVector{ChemicalSpecies}, r::AbstractVector{<:AbstractVector})
+    tmp = map( x -> SVector(x...), r )
+    return SimpleSystem(species, tmp)
 end
 
 function SimpleSystem(species::ChemicalSpecies, pos::AbstractVector{<:Unitful.Length})
@@ -72,19 +92,24 @@ mutable struct SimpleVelocitySystem{D, LU, UV, TP, TV} <: AbstractSimpleSystem{D
     velocity::Vector{SVector{D, TV}}
     function SimpleVelocitySystem(
         species::AbstractVector{ChemicalSpecies}, 
-        r::AbstractVector{<:AbstractVector}, 
-        v::AbstractVector{<:AbstractVector}
-    )
+        r::AbstractVector{SVector{D, TP}}, 
+        v::AbstractVector{SVector{D, TV}}
+    )   where {D, TP<:Unitful.Length, TV<:Unitful.Velocity}
         @argcheck length(species) == length(r) == length(v)
-        @argcheck length( eltype(r) ) == length( eltype(v) )
-        D  = (length∘eltype)(r)
-        TP = (eltype∘eltype)(r)
         LU = unit(TP)
-
-        TV = (eltype∘eltype)(v)
         UV = unit(TV)
         new{D, LU, UV, TP, TV}(species, r, v)
     end
+end
+
+function SimpleVelocitySystem(
+        species::AbstractVector{ChemicalSpecies}, 
+        r::AbstractVector{<:AbstractVector}, 
+        v::AbstractVector{<:AbstractVector}
+    )
+    tmp_r = map( x -> SVector(x...), r )
+    tmp_v = map( x -> SVector(x...), v )
+    return SimpleVelocitySystem(species, tmp_r, tmp_v)
 end
 
 
