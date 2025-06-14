@@ -59,14 +59,14 @@ function SimpleAtomsStructures.SimpleTrajectory(traj::Chemfiles.Trajectory)
 end
 
 
-function SimpleAtomsStructures.VelocityTrajectory(traj::Chemfiles.Trajectory)
-    # VelocitTrajectory has constant cell, so we can use the first frame to initialize the system
+function SimpleAtomsStructures.SimpleVelocityTrajectory(traj::Chemfiles.Trajectory)
+    # SimpleVelocityTrajectory has constant cell, so we can use the first frame to initialize the system
     first_frame = Chemfiles.read_step(traj, 0)
     if !has_velocities(first_frame)
         return SimpleAtomsStructures.SimpleTrajectory(traj)
     end
     sys = CellSystem(first_frame)
-    ntraj = SimpleAtomsStructures.VelocityTrajectory(sys)
+    ntraj = SimpleAtomsStructures.SimpleVelocityTrajectory(sys)
     for frame in traj
         pos = positions(frame) * u"Å"
         vel = velocities(frame) * u"Å/ps"
@@ -80,9 +80,9 @@ function SimpleAtomsStructures.SimpleTrajectory(fname::AbstractString)
     return SimpleAtomsStructures.SimpleTrajectory(traj)
 end
 
-function SimpleAtomsStructures.VelocityTrajectory(fname::AbstractString)
+function SimpleAtomsStructures.SimpleVelocityTrajectory(fname::AbstractString)
     traj = Chemfiles.Trajectory(fname)
-    return SimpleAtomsStructures.VelocityTrajectory(traj)    
+    return SimpleAtomsStructures.SimpleVelocityTrajectory(traj)    
 end
 
 end
