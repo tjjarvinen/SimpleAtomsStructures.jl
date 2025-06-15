@@ -222,38 +222,21 @@ include("Aqua.jl")
         end
     end
 
-    # @testset "Trajectory" begin
-    #     sys = generic_system(ref.system)
-    #     sys2 = deepcopy( sys )
-    #     translate_system!(sys2, [1., 2., 3.]u"Å")
-    #     trj = VelocityTrajectory([sys, sys2])
-    #     @test length(trj) == 2
-    #     @test all( species(trj, :) .=== species(sys, :) )
-    #     @test all( position(trj, :, 1) .≈ position(sys, :) )
-    #     @test all( position(trj, :, 2) .≈ position(sys2, :) )
-    #     @test all( velocity(trj, :, 1) .≈ velocity(sys, :) )
-    #     @test all( velocity(trj, :, 2) .≈ velocity(sys2, :) )
-    #     @test cell(trj, 1) == cell(sys)
-    #     @test cell(trj, 2) == cell(sys2) 
-    #     @test all( distance(trj, 1, 2, 1:2) .≈ distance(trj, 1, 2, :) )
-    #     @test all( bond_angle(trj, 1, 2, 3, 1:2) .≈ bond_angle(trj, 1, 2, 3, :) )
-    #     @test all( dihedral_angle(trj, 1, 2, 3, 4, 1:2) .≈ dihedral_angle(trj, 1, 2, 3, 4, :) )
-
-    #     @testset "SystemView" begin
-    #         sv = SystemView(trj, 1)
-    #         @test all( species(sv, :) .=== species(sys, :) )
-    #         @test all( position(sv, :) .≈ position(sys, :) )
-    #         @test all( velocity(sv, :) .≈ velocity(sys, :) )
-    #         @test cell(sv) == cell(sys)
-    #         @test all( periodicity(sv) .== periodicity(sys) )
-    #         @test all( cell_vectors(sv) .≈ cell_vectors(sys) )
-    #         sv2 = SystemView(trj, 2)
-    #         @test all( species(sv2, :) .=== species(sys2, :) )
-    #         @test all( position(sv2, :) .≈ position(sys2, :) )
-    #         @test all( velocity(sv2, :) .≈ velocity(sys2, :) )
-    #         @test cell(sv2) == cell(sys2)
-
-    #     end
-
-    # end
+    @testset "Trajectory" begin
+        sys = generic_system(ref.system)
+        sys2 = deepcopy( sys )
+        translate_system!(sys2, [1., 2., 3.]u"Å")
+        trj = ConstantVolumeTrajectory([sys, sys2])
+        @test length(trj) == 2
+        @test all( species(trj[1], :) .=== species(sys, :) )
+        @test all( position(trj[1], :) .≈ position(sys, :) )
+        @test all( position(trj[2], :) .≈ position(sys2, :) )
+        @test all( velocity(trj[1], :) .≈ velocity(sys, :) )
+        @test all( velocity(trj[2], :) .≈ velocity(sys2, :) )
+        @test cell(trj[1]) == cell(sys)
+        @test cell(trj[1]) == cell(sys2) 
+        @test all( distance(trj, 1, 2, 1:2) .≈ distance(trj, 1, 2, :) )
+        @test all( bond_angle(trj, 1, 2, 3, 1:2) .≈ bond_angle(trj, 1, 2, 3, :) )
+        @test all( dihedral_angle(trj, 1, 2, 3, 4, 1:2) .≈ dihedral_angle(trj, 1, 2, 3, 4, :) )
+    end
 end

@@ -45,8 +45,8 @@ function Base.append!(traj::VariableVolumeTrajectory{D, LU, TP}, sys::AbstractSy
 end
 
 
-function Base.eltype(::AbstractCellTrajectory{D, LU}) where {D, LU}
-    return SimpleAtomsStructures.CellSystemView{D, LU}
+function Base.eltype(traj::VariableVolumeTrajectory{D, LU, TP, TB}) where {D, LU, TP, TB}
+    return SimpleAtomsStructures.CellSystemView{D, LU, eltype(traj.base_trajectory), PeriodicCell{D, TP}}   
 end
 
 
@@ -66,12 +66,23 @@ mutable struct ConstantVolumeTrajectory{D, LU, TP, TB} <: AbstractCellTrajectory
     end
 end
 
+ConstantVolumeTrajectory(traj::AbstractSimpleTrajectory{D}, ::IsolatedCell{D}) where {D} = traj
+
 function ConstantVolumeTrajectory(sys)
     base = SimpleVelocityTrajectory(sys)
     if ! (cell(sys) isa PeriodicCell)
         return base
     end
     return ConstantVolumeTrajectory(base, cell(sys))
+end
+
+function ConstantVolumeTrajectory(traj::AbstractVector{<:AbstractSystem})
+    frame = traj[begin]
+    tmp = ConstantVolumeTrajectory(
+        SimpleVelocityTrajectory(traj),
+        cell(frame)
+    )
+    return tmp
 end
 
 function Base.getindex(sys::ConstantVolumeTrajectory, i::Int)
@@ -92,3 +103,10 @@ function Base.append!(traj::ConstantVolumeTrajectory{D, LU, TP}, sys::AbstractSy
     end
     return traj
 end
+
+function Base.eltype(traj::ConstantVolumeTrajectory{D, LU, TP, TB}) where {D, LU, TP, TB}
+    return SimpleAtomsStructures.CellSystemView{D, LU, eltype(traj.base_trajectory), PeriodicCell{D, TP}}   
+end
+
+Base.show(io::IO, trj::ConstantVolumeTrajectory) =
+    print(io, "ConstantVolumeTrajectory with ", length(trj), " frames of ", n_atoms(trj), " atoms")

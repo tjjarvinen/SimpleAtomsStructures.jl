@@ -23,9 +23,22 @@ function SimpleTrajectory(sys)
     )
 end
 
+function SimpleTrajectory(traj::AbstractVector{<:AbstractSystem})
+    frame = traj[begin]
+    tmp = SimpleTrajectory(
+        species(frame, :),
+        position(frame, :)
+    )
+    for i in firstindex(traj)+1:lastindex(traj)
+        sys = traj[i]
+        append!(tmp, sys)
+    end
+    return tmp
+end
+
 
 function Base.append!(traj::SimpleTrajectory{D}, pos::AbstractVector{SVector{D, TP}}) where {D, TP<:Unitful.Length}
-    @argcheck length(pos) == n_atoms(traj) "Position vector must have the same number of atoms as the trajectory"
+    @argcheck length(pos) % n_atoms(traj) == 0 "Position vector must have a length that is a multiple of the number of atoms in the trajectory"
     append!(traj.position, pos)
     return traj
 end
@@ -36,23 +49,9 @@ function Base.append!(traj::SimpleTrajectory{D}, sys::AbstractSystem{D}) where {
     return Base.append!(traj, position(sys, :))    
 end
 
-function Base.push!(traj::SimpleTrajectory{D}, pos::AbstractVector{SVector{D, TP}}) where {D, TP<:Unitful.Length}
-    @argcheck length(pos) == n_atoms(traj) "Position vector must have the same number of atoms as the trajectory"
-    append!(traj.position, pos)
-    return traj
-end
-
-function Base.push!(trj::SimpleTrajectory{D}, pos::AbstractMatrix{TP}) where{D, TP<:Unitful.Length}
-    @argcheck size(pos, 1) == D
-    @argcheck size(pos, 2) == n_atoms(trj)
-    tmp = reinterpret(reshape, SVector{D, TP}, pos)
-    push!(trj, tmp)
-    return trj
-end
-
 
 function Base.eltype(::SimpleTrajectory{D, LU, TP}) where {D, LU, TP}
-    return SimpleAtomsStructures.SimpleSystemView{D, LU, TP}
+    return SimpleAtomsStructures.SimpleSystemView{D, LU, TP, Tuple{UnitRange{Int}}, true}
 end
 
 
@@ -64,6 +63,9 @@ end
 
 Base.size(traj::AbstractSimpleTrajectory) = (Int(length(traj.position)//traj.n_atoms), )
 
+
+Base.show(io::IO, trj::SimpleTrajectory) =
+    print(io, "SimpleTrajectory with ", length(trj), " frames of ", n_atoms(trj), " atoms")
 
 ##
 
@@ -87,20 +89,37 @@ mutable struct SimpleVelocityTrajectory{D, LU, TP, TV} <: AbstractSimpleTrajecto
 end
 
 
-function SimpleVelocityTrajectory(sys)
+function SimpleVelocityTrajectory(sys::AbstractSystem)
     if hasatomkey(sys, :velocity)
-        SimpleTrajectory(sys)
+        return SimpleVelocityTrajectory(
+            species(sys, :),
+            position(sys, :),
+            velocity(sys, :)
+        )
     end
-    return SimpleVelocityTrajectory(
-        species(sys, :),
-        position(sys, :),
-        velocity(sys, :)
-    )
+    return SimpleTrajectory(sys)
+end
+
+function SimpleVelocityTrajectory(traj::AbstractVector{<:AbstractSystem})
+    frame = traj[begin]
+    if hasatomkey(frame, :velocity)
+        tmp = SimpleVelocityTrajectory(
+            species(frame, :),
+            position(frame, :),
+            velocity(frame, :)
+        )
+        for i in firstindex(traj)+1:lastindex(traj)
+            sys = traj[i]
+            append!(tmp, sys)
+        end
+        return tmp
+    end
+    return SimpleTrajectory(traj)
 end
 
 function Base.append!(traj::SimpleVelocityTrajectory{D}, pos::AbstractVector{SVector{D, TP}}, vel::AbstractVector{SVector{D, TV}}) where {D, TP<:Unitful.Length, TV<:Unitful.Velocity}
-    @argcheck length(pos) == n_atoms(traj) "Position vector must have the same number of atoms as the trajectory"
-    @argcheck length(vel) == n_atoms(traj) "Velocity vector must have the same number of atoms as the trajectory"
+    @argcheck length(pos) % n_atoms(traj) == 0 "Position vector must have a length that is a multiple of the number of atoms in the trajectory"
+    @argcheck length(vel) == length(pos) "Velocity vector must have the same length as position vector"
     append!(traj.position, pos)
     append!(traj.velocity, vel)
     return traj
@@ -113,7 +132,7 @@ function Base.append!(traj::SimpleVelocityTrajectory{D}, sys::AbstractSystem{D})
 end
 
 function Base.eltype(::SimpleVelocityTrajectory{D, LU, TP, TV}) where {D, LU, TP, TV}
-    return SimpleAtomsStructures.SimpleVelocitySystemView{D, LU, TP, TV}
+    return SimpleAtomsStructures.SimpleVelocitySystemView{D, LU, TP, TV, Tuple{UnitRange{Int}}, true}
 end
 
 function Base.getindex(traj::SimpleVelocityTrajectory, i::Int)
@@ -127,4 +146,5 @@ function Base.getindex(traj::SimpleVelocityTrajectory, i::Int)
 end
     
         
-        
+Base.show(io::IO, trj::SimpleVelocityTrajectory) =
+    print(io, "SimpleVelocityTrajectory with ", length(trj), " frames of ", n_atoms(trj), " atoms")
