@@ -20,8 +20,7 @@ export SimpleSystem
 export SimpleSystemView
 export SimpleVelocitySystem
 export SimpleVelocitySystemView
-export SystemView
-export VelocityTrajectory
+
 
 # utilities
 export add_systems

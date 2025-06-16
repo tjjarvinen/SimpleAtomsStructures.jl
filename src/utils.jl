@@ -151,11 +151,11 @@ function wrap_coordinates!(cell::PeriodicCell{D}, coord::AbstractVector{SVector{
     for i in axes(frc, 1)
         if pbc[i]
             tmp = @view frc[i,:]
-            tmp .= wrap.(tmp)
+            view(frc, i, :) .= wrap.(tmp)
         end
     end
     tmp = cell_matrix(cell) * frc
-    tmp = reinterpret(reshape, SVector{D,eltype(tmp)}, tmp) * unit(T)
+    tmp = reinterpret(reshape, SVector{D,eltype(tmp)}, tmp)
     coord .= tmp
     return coord
 end
