@@ -52,7 +52,7 @@ function SimpleAtomsStructures.SimpleTrajectory(traj::Chemfiles.Trajectory)
     first_frame = Chemfiles.read_step(traj, 0)
     sys = SimpleAtomsStructures.SimpleSystem(first_frame)
     ntraj = SimpleAtomsStructures.SimpleTrajectory(sys)
-    for frame in traj
+    for frame in Iterators.drop(traj,1)
         pos = positions(frame) * u"Å"
         r = reinterpret(reshape, SVector{3, Float64}, pos) * u"Å"
         append!(ntraj, r)
@@ -67,7 +67,7 @@ function SimpleAtomsStructures.SimpleVelocityTrajectory(traj::Chemfiles.Trajecto
     if has_velocities(first_frame)
         sys = SimpleAtomsStructures.SimpleVelocitySystem(first_frame)
         ntraj = SimpleAtomsStructures.SimpleVelocityTrajectory(sys)
-        for frame in traj
+        for frame in Iterators.drop(traj, 1)
             pos = positions(frame) * u"Å"
             vel = velocities(frame) * u"Å/ps"
             r = reinterpret(reshape, SVector{3, Float64}, pos) * u"Å"
